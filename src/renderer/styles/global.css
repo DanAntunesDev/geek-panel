@@ -1,0 +1,24 @@
+/* Paleta fixa da direção visual: um único acento (magenta) por tela. */
+:root {
+  --cor-fundo: #f7f6f3;
+  --cor-superficie: #d9d7d2;
+  --cor-texto: #1c1c1c;
+  --cor-acento: #e8368f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+  font-family: "Courier New", ui-monospace, monospace;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
