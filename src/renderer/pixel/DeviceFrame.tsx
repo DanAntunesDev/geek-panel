@@ -1,12 +1,9 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { PALETTE } from "./palette.js";
 import { PixelScaleContext } from "./PixelScale.js";
-import { BASE_HEIGHT, BASE_WIDTH, cssPerLogicalPixel, pickScale } from "./scale.js";
+import { cssPerLogicalPixel, FRAME_PAD, FRAME_SIZE, pickScale, SCENE_SIZE } from "./scale.js";
 
-const BORDER = 2;
-
-// Palco de resolução fixa (BASE_WIDTH x BASE_HEIGHT) ampliado por fator inteiro
-// de pixels físicos. Filhos medem em pixels lógicos via var(--px).
+// Caixa do aparelho (4 px lógicos) em volta da tela de 120x120.
 export function DeviceFrame({ children }: { children: ReactNode }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [cssPerPixel, setCssPerPixel] = useState(1);
@@ -31,27 +28,32 @@ export function DeviceFrame({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const stageStyle = {
-    "--px": `${cssPerPixel}px`,
-    width: BASE_WIDTH * cssPerPixel,
-    height: BASE_HEIGHT * cssPerPixel,
-    border: `${BORDER * cssPerPixel}px solid ${PALETTE.ink}`,
-    background: PALETTE.bg,
+  const px = cssPerPixel;
+  const caseStyle: CSSProperties = {
+    width: FRAME_SIZE * px,
+    height: FRAME_SIZE * px,
     boxSizing: "border-box",
-    overflow: "hidden",
-    display: "flex",
-    flexDirection: "column",
+    border: `${px}px solid ${PALETTE.ink}`,
+    padding: (FRAME_PAD - 2) * px,
+    background: PALETTE.surface,
     flexShrink: 0,
     imageRendering: "pixelated",
-  } as CSSProperties;
+  };
+  const screenStyle: CSSProperties = {
+    width: SCENE_SIZE * px + 2 * px,
+    height: SCENE_SIZE * px + 2 * px,
+    boxSizing: "border-box",
+    border: `${px}px solid ${PALETTE.ink}`,
+    background: PALETTE.bg,
+    overflow: "hidden",
+  };
 
   return (
-    <div
-      ref={hostRef}
-      style={{ flex: 1, minHeight: 0, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}
-    >
+    <div ref={hostRef} style={{ flex: 1, minHeight: 0, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
       <PixelScaleContext.Provider value={cssPerPixel}>
-        <div style={stageStyle}>{children}</div>
+        <div style={caseStyle}>
+          <div style={screenStyle}>{children}</div>
+        </div>
       </PixelScaleContext.Provider>
     </div>
   );
