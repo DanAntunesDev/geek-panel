@@ -15,6 +15,7 @@ import {
 } from "../pixel/draw.js";
 import { PALETTE, SPRITE_COLORS } from "../pixel/palette.js";
 import type { PixelGrid } from "../pixel/PixelCanvas.js";
+import { drawCat } from "../pixel/cat.js";
 import { SCENE_SIZE } from "../pixel/scale.js";
 import { led, screenWell } from "../pixel/ui.js";
 
@@ -363,62 +364,6 @@ function drawNotes(ctx: Ctx, view: PlayerView): void {
   }
 }
 
-// Gato sentado na mesa: silhueta em ink com realces em mid.
-const CAT_HEAD: PixelGrid = [
-  "..K.......K..",
-  "..KK.....KK..",
-  "..KMK...KMK..",
-  "..KKKKKKKKK..",
-  ".KMKKKKKKKKK.",
-  ".KKKKKKKKKKK.",
-  "MKKKKKMKKKKKM",
-  ".KKKKKKKKKKK.",
-  "..KKKKKKKKK..",
-];
-const CAT_BODY: PixelGrid = [".KKKKKKKKKKK.", "KKKKKMKKKKKKK", "KKKKKKKKKKKKK", "KKKMKKKKKMKKK", "KKKKKKKKKKKKK"];
-const CAT_TAIL: PixelGrid[] = [
-  ["....", "....", "....", "..K.", ".KK.", "KK.."],
-  ["....", "....", "..KK", "..K.", ".KK.", "KK.."],
-  ["...K", "..KK", "..K.", ".KK.", ".K..", "KK.."],
-  ["....", "..KK", "..K.", ".KK.", ".K..", "KK.."],
-];
-const CAT = { x: 103, y: 71 };
-
-// Toca: acorda, pisca e balança a cabeça no ritmo. Parado: dorme e respira, com zZz.
-function drawCat(ctx: Ctx, view: PlayerView): void {
-  const { x, y } = CAT;
-  const { frame, playing } = view;
-  const colors = { K: PALETTE.ink, M: PALETTE.mid };
-
-  const beat = playing && Math.floor(frame / 3) % 2 === 0 ? 1 : 0;
-  const breath = !playing && Math.floor(frame / 12) % 2 === 0 ? 1 : 0;
-  const headY = y + beat + breath;
-
-  sprite(ctx, CAT_TAIL[Math.floor(frame / (playing ? 2 : 8)) % CAT_TAIL.length], colors, x + 13, y + 9);
-  sprite(ctx, CAT_BODY, colors, x, y + 9);
-  sprite(ctx, CAT_HEAD, colors, x, headY);
-
-  const awake = playing && frame % 47 >= 2;
-  if (awake) {
-    pixel(ctx, x + 4, headY + 5, PALETTE.bg);
-    pixel(ctx, x + 8, headY + 5, PALETTE.bg);
-  } else if (!playing) {
-    // olhos fechados
-    rect(ctx, x + 3, headY + 5, 2, 1, PALETTE.mid);
-    rect(ctx, x + 8, headY + 5, 2, 1, PALETTE.mid);
-  }
-  // a orelha mexe de vez em quando
-  if (frame % 61 < 2) pixel(ctx, x + 10, headY, PALETTE.ink);
-
-  if (!playing) {
-    for (let index = 0; index < 2; index += 1) {
-      const t = (Math.floor(frame / 2) + index * 8) % 16;
-      if (t > 13) continue;
-      sprite(ctx, ["KKK", ".K.", "KKK"], { K: PALETTE.mid }, x + 11 + (t % 4 < 2 ? 0 : 1), y - 2 - Math.floor(t / 2));
-    }
-  }
-}
-
 function drawButton(ctx: Ctx, box: ButtonBox, icon: PixelGrid, pressed: boolean, enabled: boolean): void {
   const { x, y, w, h } = box;
   rect(ctx, x, y, w, h, PALETTE.ink);
@@ -445,7 +390,7 @@ export function drawPlayer(ctx: Ctx, view: PlayerView): void {
   drawWindow(ctx, view.frame);
   drawSpray(ctx);
   drawTable(ctx);
-  drawCat(ctx, view);
+  drawCat(ctx, { x: 103, y: 71, frame: view.frame, awake: view.playing });
   drawBody(ctx, view);
   drawPlatter(ctx, view);
   drawEqualizer(ctx, view);
