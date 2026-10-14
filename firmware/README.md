@@ -2,7 +2,7 @@
 
 Firmware para o GeekMagic SmallTV-Ultra (ESP8266, 4 MB, display ST7789 240x240). O aparelho não desenha nada sozinho: o app no PC desenha as telas e manda os quadros pelo Wi-Fi, e ele só exibe, em 2x (cada pixel de 120x120 vira 2x2).
 
-Ainda não foi testado no aparelho. Os pinos e as opções do display (inverter cores, luz) vêm de projetos da comunidade para a mesma placa, por isso dá para ajustar tudo pela página do aparelho.
+Testado em um aparelho só. Os pinos e as opções do display (inverter cores, luz) vêm de projetos da comunidade para a mesma placa, por isso dá para ajustar tudo pela página do aparelho.
 
 ## Como ele acha o PC
 
@@ -12,7 +12,7 @@ Ainda não foi testado no aparelho. Os pinos e as opções do display (inverter 
 
 Enquanto não acha o app, mostra uma tela de espera animada (conectando, procurando, configurar Wi-Fi, código errado). Essas telas vêm de `art/waitingScene.ts`.
 
-A página do aparelho (`http://IP-DELE/`) tem Wi-Fi, IP do PC (opcional), código de pareamento, brilho, rotação e um padrão de teste. Com o código definido, as ações e o `/update` pedem usuário `admin` e esse código.
+A página do aparelho (`http://IP-DELE/`) tem Wi-Fi, IP do PC (opcional), código de pareamento, brilho, rotação e um padrão de teste. Com o código definido, as ações e o `/update` pedem usuário `admin` e esse código. O app também usa `/pair` para mandar o código sozinho e `/reset` para apagar o Wi-Fi e os ajustes (o botão "Apagar tudo e recomeçar" faz o mesmo).
 
 ## Compilar
 
