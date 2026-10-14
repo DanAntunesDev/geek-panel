@@ -3,7 +3,7 @@ import type { MediaState, PlayerCommand } from "../../shared/types.js";
 import { PixelScene } from "../pixel/PixelScene.js";
 import { buttonAt, drawPlayer, NEEDLE_STEPS, ringFraction, SCENE_SIZE, volumeAt, type ButtonId } from "./playerScene.js";
 import { anchorPosition } from "./positionClock.js";
-import { seedOf, SETTLE_FRAMES, swapAt, swapDone, trackKey } from "./vinylSwap.js";
+import { advanceSwap, seedOf, swapAt, trackKey } from "./vinylSwap.js";
 
 const FPS = 10;
 const NEEDLE_STEP_FRAMES = 2;
@@ -34,7 +34,6 @@ export function PlayerScreen() {
     key: null as string | null,
     pending: false,
     start: -1,
-    lastStart: -1000,
     shown: { title: "", artist: "" },
   });
 
@@ -103,19 +102,11 @@ export function PlayerScreen() {
       const current = mediaRef.current;
       const duration = current?.durationSeconds ?? 0;
       const change = swap.current;
-      if (change.pending) {
-        change.pending = false;
-        // título que pisca logo depois de uma troca não gera outro disco
-        if (frame - change.lastStart > SETTLE_FRAMES) {
-          change.lastStart = frame;
-          change.start = frame;
-        }
-      }
-      if (change.start >= 0 && swapDone(frame - change.start)) change.start = -1;
+      advanceSwap(change, frame);
       const timeline = change.start >= 0 ? swapAt(frame - change.start) : null;
 
       // o disco velho fica congelado até sair; depois segue a faixa atual
-      if (!timeline || timeline.content === "new") change.shown = { title: current?.title ?? "", artist: current?.artist ?? "" };
+      if (!timeline || (timeline.content === "new" && !change.pending)) change.shown = { title: current?.title ?? "", artist: current?.artist ?? "" };
 
       if (frame !== state.lastFrame) {
         state.lastFrame = frame;
@@ -123,10 +114,9 @@ export function PlayerScreen() {
         if (frame % NEEDLE_STEP_FRAMES === 0 && state.needleStep !== target) {
           state.needleStep += Math.sign(target - state.needleStep);
         }
-        if (playingRef.current && !timeline?.armUp && state.needleStep === NEEDLE_STEPS - 1) {
-          state.spin += 1;
-          state.positionTicks += 1;
-        }
+        // o disco só gira com a agulha em baixo, mas o tempo da música corre sempre que ela toca
+        if (playingRef.current && !timeline?.armUp && state.needleStep === NEEDLE_STEPS - 1) state.spin += 1;
+        if (playingRef.current) state.positionTicks += 1;
         if (duration > 0 && state.positionTicks > duration * FPS) state.positionTicks = duration * FPS;
       }
 

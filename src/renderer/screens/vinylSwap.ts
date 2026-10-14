@@ -1,12 +1,13 @@
 // Troca de vinil: levanta a agulha, o disco velho sai, o novo entra e a agulha desce.
-export const SWAP_FRAMES = 20;
-const LIFT = 4;
-const OUT = 10;
+// A agulha leva 6 quadros para subir; só então o disco velho sai.
+export const SWAP_FRAMES = 16;
+const LIFT = 6;
+const OUT = 11;
 const IN = 16;
-const SLIDE_STEP = 11;
+const SLIDE_STEP = 13;
 
-// Depois que uma troca começa, mudanças de título nesse prazo só atualizam o disco que está entrando.
-export const SETTLE_FRAMES = 50;
+// Até aqui o disco velho ainda está no prato: uma faixa nova ainda cabe nesta mesma troca.
+export const OLD_DISC_FRAMES = OUT;
 
 export interface SwapFrame {
   armUp: boolean;
@@ -24,6 +25,26 @@ export function swapAt(frame: number): SwapFrame {
 }
 
 export const swapDone = (frame: number) => frame >= SWAP_FRAMES;
+
+export interface SwapState {
+  // quadro em que a troca atual começou; -1 sem troca
+  start: number;
+  // faixa nova esperando por uma troca
+  pending: boolean;
+}
+
+// Cada faixa nova ganha uma troca completa. Se o disco velho ainda está no prato, a troca em
+// andamento já serve; se o novo já entrou, a próxima começa quando esta terminar.
+export function advanceSwap(state: SwapState, frame: number): void {
+  if (state.start >= 0 && swapDone(frame - state.start)) state.start = -1;
+  if (!state.pending) return;
+  if (state.start < 0) {
+    state.pending = false;
+    state.start = frame;
+  } else if (frame - state.start < OLD_DISC_FRAMES) {
+    state.pending = false;
+  }
+}
 
 export function trackKey(title: string, artist: string): string | null {
   return title ? `${title}|${artist}` : null;
