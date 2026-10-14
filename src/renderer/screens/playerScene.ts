@@ -59,6 +59,26 @@ export interface PlayerView {
   needleStep: number;
   spin: number;
   frame: number;
+  // Deslocamento do vinil na troca de disco (0 = no prato).
+  vinylOffset: number;
+  // Muda o desenho do disco (sulcos e selo) a cada faixa.
+  seed: number;
+}
+
+const GROOVE_SETS = [
+  [0.46, 0.6, 0.74, 0.88],
+  [0.42, 0.56, 0.7, 0.84],
+  [0.5, 0.64, 0.78, 0.9],
+];
+
+// Desenho do selo por faixa: liso, risco, dois pontos ou anel.
+function drawLabelPattern(ctx: Ctx, cx: number, cy: number, seed: number): void {
+  const variant = seed % 4;
+  if (variant === 1) rect(ctx, cx - 5, cy, 11, 1, PALETTE.mid);
+  else if (variant === 2) {
+    pixel(ctx, cx - 4, cy, PALETTE.ink);
+    pixel(ctx, cx + 4, cy, PALETTE.ink);
+  } else if (variant === 3) ellipseRing(ctx, cx, cy, 7, 3, 0.45, 0.62, PALETTE.mid);
 }
 
 const MARQUEE = { left: 4, right: 116, textY: 3 };
@@ -224,29 +244,37 @@ function drawPlatter(ctx: Ctx, view: PlayerView): void {
   ellipseRing(ctx, cx, cy, rx, ry, 0.86, 0.97, PALETTE.mid);
   if (progress > 0) ellipseRing(ctx, cx, cy, rx, ry, 0.86, 0.97, PALETTE.accent, (turn) => turn <= progress);
 
-  // vinil, com a borda lateral aparecendo embaixo
-  ellipse(ctx, cx, cy + 2, 25, 14, PALETTE.mid);
-  ellipse(ctx, cx, cy, 25, 14, PALETTE.ink);
+  // vinil (recortado ao tampo, para entrar e sair na troca de disco)
+  const vx = cx + view.vinylOffset;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(5, 18, 94, 46);
+  ctx.clip();
+
+  ellipse(ctx, vx, cy + 2, 25, 14, PALETTE.mid);
+  ellipse(ctx, vx, cy, 25, 14, PALETTE.ink);
 
   const inWedge = (turn: number) => circularDistance(turn, phase) < 0.07 || circularDistance(turn, phase + 0.5) < 0.07;
-  ellipseRing(ctx, cx, cy, 25, 14, 0.3, 0.94, PALETTE.mid, inWedge);
-  for (const radius of [0.46, 0.6, 0.74, 0.88]) {
-    ellipseRing(ctx, cx, cy, 25, 14, radius - 0.06, radius, PALETTE.surface, inWedge);
-    ellipseRing(ctx, cx, cy, 25, 14, radius - 0.06, radius, PALETTE.mid, (turn) => !inWedge(turn));
+  ellipseRing(ctx, vx, cy, 25, 14, 0.3, 0.94, PALETTE.mid, inWedge);
+  for (const radius of GROOVE_SETS[view.seed % GROOVE_SETS.length]) {
+    ellipseRing(ctx, vx, cy, 25, 14, radius - 0.06, radius, PALETTE.surface, inWedge);
+    ellipseRing(ctx, vx, cy, 25, 14, radius - 0.06, radius, PALETTE.mid, (turn) => !inWedge(turn));
   }
 
   // dois reflexos correndo pela borda
   for (const offset of [0, 0.5]) {
     const glint = (phase * 2 + offset) * Math.PI * 2;
-    pixel(ctx, cx + Math.round(Math.sin(glint) * 23.5), cy - Math.round(Math.cos(glint) * 13), PALETTE.bg);
+    pixel(ctx, vx + Math.round(Math.sin(glint) * 23.5), cy - Math.round(Math.cos(glint) * 13), PALETTE.bg);
   }
 
   // selo
-  ellipse(ctx, cx, cy, 8, 4, PALETTE.ink);
-  ellipse(ctx, cx, cy, 7, 3, PALETTE.surface);
+  ellipse(ctx, vx, cy, 8, 4, PALETTE.ink);
+  ellipse(ctx, vx, cy, 7, 3, PALETTE.surface);
+  drawLabelPattern(ctx, vx, cy, view.seed);
   const angle = phase * Math.PI * 2;
-  rect(ctx, cx + Math.round(Math.sin(angle) * 4) - 1, cy - Math.round(Math.cos(angle) * 2), 2, 1, PALETTE.ink);
-  pixel(ctx, cx, cy, PALETTE.ink);
+  rect(ctx, vx + Math.round(Math.sin(angle) * 4) - 1, cy - Math.round(Math.cos(angle) * 2), 2, 1, PALETTE.ink);
+  pixel(ctx, vx, cy, PALETTE.ink);
+  ctx.restore();
 }
 
 function armTip(step: number): { x: number; y: number } {

@@ -1,0 +1,37 @@
+// Troca de vinil: levanta a agulha, o disco velho sai, o novo entra e a agulha desce.
+export const SWAP_FRAMES = 32;
+const LIFT = 8;
+const OUT = 16;
+const IN = 24;
+const SLIDE_STEP = 8;
+
+export interface SwapFrame {
+  armUp: boolean;
+  vinylOffset: number;
+  // Qual faixa aparece no marquee e no desenho do disco.
+  content: "old" | "new";
+  ringHidden: boolean;
+}
+
+export function swapAt(frame: number): SwapFrame {
+  if (frame < LIFT) return { armUp: true, vinylOffset: 0, content: "old", ringHidden: false };
+  if (frame < OUT) return { armUp: true, vinylOffset: -(frame - LIFT + 1) * SLIDE_STEP, content: "old", ringHidden: true };
+  if (frame < IN) return { armUp: true, vinylOffset: (IN - frame) * SLIDE_STEP, content: "new", ringHidden: true };
+  return { armUp: false, vinylOffset: 0, content: "new", ringHidden: false };
+}
+
+export const swapDone = (frame: number) => frame >= SWAP_FRAMES;
+
+// Quando um disco já não estava no prato, a troca começa direto na entrada do novo.
+export const SKIP_OUT_FRAMES = OUT;
+
+export function trackKey(title: string, artist: string): string | null {
+  return title ? `${title}|${artist}` : null;
+}
+
+// Número estável por faixa, para variar sulcos e selo do disco.
+export function seedOf(title: string, artist: string): number {
+  let hash = 7;
+  for (const char of `${title}|${artist}`) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return hash % 1000;
+}
