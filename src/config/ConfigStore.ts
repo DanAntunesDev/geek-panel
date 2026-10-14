@@ -11,7 +11,6 @@ export const DEFAULT_CONFIG: AppConfig = {
   device: {
     host: "192.168.1.5",
     port: 80,
-    requestTimeoutMs: 1500,
     autoConnect: true,
     brightness: 60,
     pairingCode: "",
@@ -43,9 +42,6 @@ export const DEFAULT_CONFIG: AppConfig = {
     googleClientId: "",
   },
   media: {
-    pollIntervalMs: 1000,
-    artworkPath: null,
-    gifPath: null,
     systemPlayers: true,
     spotifyClientId: "",
     googleClientId: "",
@@ -131,9 +127,6 @@ export function validateConfig(input: unknown): AppConfig {
   }
   if (!Number.isInteger(merged.device.port) || merged.device.port < 1 || merged.device.port > 65535) {
     throw new ConfigValidationError("porta do display fora do intervalo permitido");
-  }
-  if (merged.device.requestTimeoutMs < 100 || merged.device.requestTimeoutMs > 10_000) {
-    throw new ConfigValidationError("timeout de requisição fora do intervalo permitido");
   }
   for (const seconds of [
     merged.rotation.playerSeconds,

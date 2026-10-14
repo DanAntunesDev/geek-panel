@@ -85,7 +85,6 @@ export interface AppConfig {
   device: {
     host: string;
     port: number;
-    requestTimeoutMs: number;
     // Aceita o aparelho assim que ele aparecer na rede.
     autoConnect: boolean;
     brightness: number;
@@ -124,9 +123,6 @@ export interface AppConfig {
     googleClientId: string;
   };
   media: {
-    pollIntervalMs: number;
-    artworkPath: string | null;
-    gifPath: string | null;
     // Detecta o que está tocando nos players abertos nesta máquina.
     systemPlayers: boolean;
     // IDs públicos de aplicativo; segredos ficam no armazenamento seguro.

@@ -130,7 +130,7 @@ describe("ConfigStore", () => {
   });
 
   it("salva e recarrega a configuração validada", async () => {
-    await store.save({ device: { host: "10.0.0.9", port: 8080, requestTimeoutMs: 2000 } });
+    await store.save({ device: { host: "10.0.0.9", port: 8080 } });
     const loaded = await store.load();
     expect(loaded.device.host).toBe("10.0.0.9");
     expect(loaded.device.port).toBe(8080);
