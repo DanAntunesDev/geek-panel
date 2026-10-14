@@ -1,4 +1,4 @@
-// Expõe somente comandos tipados ao renderer via contextBridge (seção 17.4).
+// Expõe ao renderer só os comandos tipados, via contextBridge.
 
 import { contextBridge, ipcRenderer } from "electron";
 import { IPC_CHANNELS } from "../shared/ipcChannels.js";

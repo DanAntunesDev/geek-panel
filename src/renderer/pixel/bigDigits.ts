@@ -31,10 +31,6 @@ export interface DigitStyle {
   clipBottom?: number;
 }
 
-export function digitSize(char: string, cell: number): { w: number; h: number } {
-  return { w: glyphWidth(char) * cell, h: GLYPH_ROWS * cell };
-}
-
 export function drawDigit(ctx: Ctx, char: string, x: number, y: number, style: DigitStyle): void {
   const glyph = GLYPHS[char];
   if (!glyph) return;

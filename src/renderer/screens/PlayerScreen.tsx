@@ -37,7 +37,7 @@ export function PlayerScreen() {
     key: null as string | null,
     shown: { title: "", artist: "" },
   });
-  // pausa de verdade (clique no botão) lifta a agulha na hora; sumiço breve do player não
+  // pausa de verdade (clique no botão) levanta a agulha na hora; sumiço breve do player não
   const userPaused = useRef<number | null>(null);
 
   const applyMedia = useCallback((next: MediaState | null) => {

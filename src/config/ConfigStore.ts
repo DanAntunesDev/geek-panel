@@ -83,7 +83,7 @@ const HOST_PATTERN = /^(\d{1,3}\.){3}\d{1,3}$|^[a-zA-Z0-9.-]+$/;
 
 export class ConfigValidationError extends Error {}
 
-// Valida somente os campos que o editor visual permite alterar (seção 11 da spec).
+// Valida os campos que a tela de Config permite alterar.
 // Rejeita valores fora dos limites em vez de tentar "corrigir" silenciosamente.
 export function validateConfig(input: unknown): AppConfig {
   if (typeof input !== "object" || input === null) {

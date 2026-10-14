@@ -21,17 +21,6 @@ export function screenWell(ctx: Ctx, x: number, y: number, w: number, h: number)
   rect(ctx, x + 1, y + 1, 1, h - 2, PALETTE.mid);
 }
 
-export function chamfer(ctx: Ctx, x: number, y: number, w: number, h: number, color: string): void {
-  for (const [cx, cy] of [
-    [x, y],
-    [x + w - 1, y],
-    [x, y + h - 1],
-    [x + w - 1, y + h - 1],
-  ]) {
-    rect(ctx, cx, cy, 1, 1, color);
-  }
-}
-
 export function titleBand(ctx: Ctx, width: number, title: string, height = 14): void {
   rect(ctx, 0, 0, width, height, PALETTE.ink);
   rect(ctx, 0, height, width, 1, PALETTE.mid);

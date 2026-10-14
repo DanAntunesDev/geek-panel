@@ -81,12 +81,6 @@ export interface StreamingSourceConfig {
 
 export type ClockStyle = "digital" | "analog" | "flip";
 
-export interface ClockState {
-  time: string;
-  date: string | null;
-  timezone: string;
-}
-
 export interface AppConfig {
   device: {
     host: string;

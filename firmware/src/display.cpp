@@ -7,7 +7,7 @@
 static TFT_eSPI tft;
 uint8_t frameBuf[FRAME_BYTES];
 
-// Mesmas cores do app (bg, surface, mid, ink, accent, accentShade) em RGB565.
+// Cores de partida (bg, surface, mid, ink, accent, accentShade) em RGB565, até o app mandar as dele.
 static const uint16_t DEFAULT_PALETTE[6] = {0xF7BE, 0xDEBA, 0x7BCE, 0x18E3, 0xE9B1, 0xA12D};
 static uint16_t palette[16];
 static uint8_t paletteCount = 6;

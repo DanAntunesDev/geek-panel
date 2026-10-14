@@ -1,4 +1,4 @@
-// Cria a janela principal com as restrições de segurança da seção 17.4 da spec.
+// Janela principal: sem Node no renderer, com CSP e navegação travada.
 
 import { BrowserWindow, shell } from "electron";
 import * as path from "node:path";
@@ -28,6 +28,9 @@ export function attachRenderer(window: BrowserWindow, hash = ""): void {
       });
     });
   }
+
+  // a interface não precisa de câmera, microfone nem localização
+  window.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
 
   window.webContents.on("will-navigate", (event, url) => {
     if (!url.startsWith("file://") && !(devServerUrl && url.startsWith(devServerUrl))) {

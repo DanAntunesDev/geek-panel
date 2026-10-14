@@ -22,9 +22,6 @@ const TAIL: PixelGrid[] = [
   ["....", "..KK", "..K.", ".KK.", ".K..", "KK.."],
 ];
 
-export const CAT_WIDTH = 13;
-export const CAT_HEIGHT = 14;
-
 interface CatOptions {
   x: number;
   y: number;

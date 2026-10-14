@@ -1,4 +1,4 @@
-// Paleta fechada: não adicionar cores
+// Paleta base do painel; só o destaque e as cores de tokens e relógio mudam pela Config.
 
 import { readableOn, shadeOf } from "../../shared/theme.js";
 import type { ThemeConfig } from "../../shared/types.js";
@@ -14,8 +14,6 @@ export const PALETTE = {
   // accent escurecido
   accentShade: "#A5276A",
 };
-
-export type PaletteKey = keyof typeof PALETTE;
 
 export const SPRITE_COLORS = {
   K: PALETTE.ink,
@@ -41,7 +39,6 @@ export function applyTheme(theme: ThemeConfig): void {
   PALETTE.accentShade = shadeOf(theme.accent);
   SPRITE_COLORS.A = PALETTE.accent;
   SPRITE_COLORS.B = PALETTE.accentShade;
-  PALETTE_VALUES.splice(0, PALETTE_VALUES.length, ...Object.values(PALETTE));
   THEME.tokens = [...theme.tokens];
   THEME.clock = { ...theme.clock };
   const root = document.documentElement.style;
@@ -49,5 +46,3 @@ export function applyTheme(theme: ThemeConfig): void {
   root.setProperty("--accent-shade", PALETTE.accentShade);
   root.setProperty("--on-accent", readableOn(PALETTE.accent));
 }
-
-export const PALETTE_VALUES: string[] = Object.values(PALETTE);

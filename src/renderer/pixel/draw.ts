@@ -61,32 +61,6 @@ export function disc(ctx: Ctx, cx: number, cy: number, radius: number, color: st
   }
 }
 
-// keep filtra por ângulo (0 = topo, sentido horário)
-export function ring(
-  ctx: Ctx,
-  cx: number,
-  cy: number,
-  inner: number,
-  outer: number,
-  color: string,
-  keep?: (turn: number) => boolean,
-): void {
-  ctx.fillStyle = color;
-  const innerLimit = inner * inner + inner;
-  const outerLimit = outer * outer + outer;
-  for (let dy = -outer; dy <= outer; dy += 1) {
-    for (let dx = -outer; dx <= outer; dx += 1) {
-      const d2 = dx * dx + dy * dy;
-      if (d2 > outerLimit || d2 <= innerLimit) continue;
-      if (keep) {
-        const turn = (Math.atan2(dx, -dy) / (Math.PI * 2) + 1) % 1;
-        if (!keep(turn)) continue;
-      }
-      ctx.fillRect(cx + dx, cy + dy, 1, 1);
-    }
-  }
-}
-
 export function line(ctx: Ctx, x0: number, y0: number, x1: number, y1: number, color: string, thickness = 1): void {
   ctx.fillStyle = color;
   let x = Math.round(x0);
