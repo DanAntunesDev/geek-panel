@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { AuthService, AuthStatus } from "../../../shared/types.js";
+import { notify } from "./toast.js";
 import { Chip } from "./ui.js";
 
 export type Notice = { tone: "ok" | "err"; text: string } | null;
@@ -28,19 +29,27 @@ export function useAuth(service: AuthService, persist: () => Promise<void>) {
     setNotice({ tone: "ok", text: "autorize no navegador que abriu…" });
     try {
       await persist();
-      setStatus(await window.painelApi.login(service));
+      const next = await window.painelApi.login(service);
+      setStatus(next);
       setNotice(null);
+      notify("ok", `conta conectada${next.account ? `: ${next.account}` : ""}`);
     } catch (error) {
       setNotice({ tone: "err", text: describeError(error) });
+      notify("err", describeError(error));
     } finally {
       setBusy(false);
     }
   }, [service, persist]);
 
   const disconnect = useCallback(async () => {
-    await window.painelApi.logout(service);
-    setStatus({ connected: false, account: null });
-    setNotice(null);
+    try {
+      await window.painelApi.logout(service);
+      setStatus({ connected: false, account: null });
+      setNotice(null);
+      notify("ok", "conta desconectada");
+    } catch (error) {
+      notify("err", describeError(error));
+    }
   }, [service]);
 
   return { status, busy, notice, connect, disconnect };
@@ -60,12 +69,16 @@ export function AuthControls({ auth, ready, readyHint }: { auth: ReturnType<type
             SAIR
           </button>
         ) : (
-          <button className="px-btn px-btn-primary" type="button" disabled={!ready || auth.busy} onClick={auth.connect}>
+          <button className="px-btn px-btn-primary" type="button" disabled={auth.busy} onClick={ready ? auth.connect : () => notify("err", readyHint)}>
             {auth.busy ? "AGUARDANDO…" : "CONECTAR"}
           </button>
         )}
       </div>
-      {!ready && !auth.status.connected ? <p className="cfg-note">{readyHint}</p> : null}
+      {!ready && !auth.status.connected ? (
+        <p className="cfg-note">
+          <strong>Falta configurar:</strong> {readyHint}
+        </p>
+      ) : null}
       <NoticeLine notice={auth.notice} />
     </>
   );

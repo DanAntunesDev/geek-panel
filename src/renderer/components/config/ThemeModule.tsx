@@ -1,5 +1,6 @@
 import type { AppConfig } from "../../../shared/types.js";
 import { ACCENT_PATTERN, DEFAULT_ACCENT } from "../../../shared/theme.js";
+import { notify } from "./toast.js";
 import { Field } from "./ui.js";
 
 const PRESETS = ["#E8368F", "#E8503A", "#E8A317", "#3DAE5C", "#1FA8A0", "#3B7DE0", "#8A5CE0", "#1C1C1C"];
@@ -39,7 +40,14 @@ export function ThemeModule({ config, setConfig }: { config: AppConfig; setConfi
             aria-invalid={!ACCENT_PATTERN.test(accent)}
           />
         </Field>
-        <button className="px-btn" type="button" onClick={() => choose(DEFAULT_ACCENT)}>
+        <button
+          className="px-btn"
+          type="button"
+          onClick={() => {
+            choose(DEFAULT_ACCENT);
+            notify("ok", "cor padrão escolhida: clique em SALVAR para aplicar");
+          }}
+        >
           PADRÃO
         </button>
       </div>

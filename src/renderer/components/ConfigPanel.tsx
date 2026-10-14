@@ -5,6 +5,7 @@ import { DeviceModule } from "./config/DeviceModule.js";
 import { MediaModule } from "./config/MediaModule.js";
 import { ThemeModule } from "./config/ThemeModule.js";
 import { ProvidersModule } from "./config/ProvidersModule.js";
+import { notify, Toaster } from "./config/toast.js";
 import { Check, Divider, Field, Module, Segmented } from "./config/ui.js";
 
 const ROTATION_MODES: { value: ManualMode; label: string }[] = [
@@ -35,6 +36,7 @@ export function ConfigPanel() {
   const [status, setStatus] = useState<{ address: string; port: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
     window.painelApi.getConfig().then(setConfig);
@@ -46,10 +48,12 @@ export function ConfigPanel() {
   const update = (next: AppConfig) => {
     setConfig(next);
     setSaved(false);
+    setDirty(true);
   };
 
   async function persist(next: AppConfig = config!) {
     setConfig(await window.painelApi.saveConfig(next));
+    setDirty(false);
   }
 
   async function handleSave() {
@@ -58,13 +62,17 @@ export function ConfigPanel() {
     try {
       await persist();
       setSaved(true);
+      notify("ok", "configuração salva");
     } catch (err) {
-      setError((err instanceof Error ? err.message : "erro desconhecido").replace(/^Error invoking remote method '[^']+': (Error: )?/, ""));
+      const message = (err instanceof Error ? err.message : "erro desconhecido").replace(/^Error invoking remote method '[^']+': (Error: )?/, "");
+      setError(message);
+      notify("err", message);
     }
   }
 
   return (
     <div className="cfg">
+      <Toaster />
       <div className="cfg-inner">
         <Module title="DISPLAY REMOTO">
           <DeviceModule config={config} setConfig={update} persist={() => persist()} />
@@ -168,6 +176,7 @@ export function ConfigPanel() {
         <button className="px-btn px-btn-primary" type="button" onClick={handleSave}>
           SALVAR CONFIGURAÇÃO
         </button>
+        {dirty ? <p className="cfg-note">Há alterações que ainda não foram salvas.</p> : null}
         {saved ? <p className="cfg-note">OK: configuração salva.</p> : null}
         {error ? <p className="cfg-note">ERRO: {error}</p> : null}
       </div>

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import type { AppConfig, DeviceCheck, DeviceLinkStatus } from "../../../shared/types.js";
+import { describeError } from "./auth.js";
+import { notify } from "./toast.js";
 import { Check, Chip, Field } from "./ui.js";
 
 function newCode(): string {
@@ -29,9 +31,13 @@ export function DeviceModule({ config, setConfig, persist }: { config: AppConfig
     setResult("testing");
     try {
       await persist();
-      setResult(await window.painelApi.testDevice());
-    } catch {
+      const check = await window.painelApi.testDevice();
+      setResult(check);
+      if (check.ok) notify("ok", `HTTP ${check.status}: ${check.model} ${check.version}`);
+      else notify("err", `${FAILURES[check.reason]}${check.status ? ` (HTTP ${check.status})` : ""}`);
+    } catch (error) {
       setResult({ ok: false, reason: "unreachable" });
+      notify("err", `não consegui testar: ${describeError(error)}`);
     }
   }
 
@@ -67,11 +73,16 @@ export function DeviceModule({ config, setConfig, persist }: { config: AppConfig
       <Check checked={config.app.startWithSystem} onChange={(value) => setConfig({ ...config, app: { ...config.app, startWithSystem: value } })}>
         Abrir o painel na bandeja quando o computador ligar
       </Check>
+      {link?.rejected && !link.connected ? (
+        <div className="cfg-alert" role="alert">
+          <strong>APARELHO RECUSADO: CÓDIGO ERRADO</strong>
+          O aparelho em {link.rejected} mandou um código diferente do que está aqui ({config.device.pairingCode || "vazio"}). Abra http://{link.rejected}/
+          no navegador, digite este código no campo "Código" e salve.
+        </div>
+      ) : null}
       <p className="cfg-note">
         {link?.connected ? (
           <Chip>APARELHO CONECTADO: {link.address}</Chip>
-        ) : link?.rejected ? (
-          <Chip tone="off">APARELHO RECUSADO, CÓDIGO ERRADO: {link.rejected}</Chip>
         ) : link?.error ? (
           <Chip tone="off">ERRO: {link.error}</Chip>
         ) : link?.running ? (
@@ -90,7 +101,10 @@ export function DeviceModule({ config, setConfig, persist }: { config: AppConfig
             onChange={(event) => setConfig({ ...config, device: { ...config.device, pairingCode: event.target.value.replace(/[^0-9A-Za-z]/g, "") } })}
           />
         </Field>
-        <button className="px-btn" type="button" onClick={() => setConfig({ ...config, device: { ...config.device, pairingCode: newCode() } })}>
+        <button className="px-btn" type="button" onClick={() => {
+            setConfig({ ...config, device: { ...config.device, pairingCode: newCode() } });
+            notify("ok", "código novo gerado: clique em SALVAR e digite no aparelho");
+          }}>
           NOVO CÓDIGO
         </button>
       </div>
@@ -113,11 +127,13 @@ export function DeviceModule({ config, setConfig, persist }: { config: AppConfig
         <p className="cfg-note">
           {result.ok ? (
             <Chip>
-              CONECTADO: {result.model} {result.version}
+              OK {result.status} · {result.model} {result.version}
               {bytes(result.freeBytes)}
             </Chip>
           ) : (
-            <Chip tone="off">{FAILURES[result.reason]}</Chip>
+            <Chip tone="off">
+              ERRO{result.status ? ` ${result.status}` : ""} · {FAILURES[result.reason]}
+            </Chip>
           )}
         </p>
       ) : null}

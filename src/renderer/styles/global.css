@@ -275,3 +275,44 @@ button {
 .cfg-row .cfg-field {
   min-width: 96px;
 }
+
+/* Aviso flutuante da tela de Config e alerta grande. */
+.cfg-toast {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 10;
+  padding: 12px;
+  line-height: 14px;
+  cursor: pointer;
+  color: var(--bg);
+  background: var(--ink);
+  border: 3px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--mid);
+}
+
+.cfg-toast-err {
+  border-color: var(--accent);
+  box-shadow: 4px 4px 0 var(--accent-shade);
+}
+
+.cfg-toast strong {
+  color: var(--accent);
+}
+
+.cfg-alert {
+  margin: 8px 0 12px;
+  padding: 12px;
+  line-height: 14px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 3px solid var(--accent);
+  box-shadow: 4px 4px 0 var(--accent-shade);
+}
+
+.cfg-alert strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 10px;
+}
