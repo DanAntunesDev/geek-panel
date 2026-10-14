@@ -5,7 +5,7 @@ import { useCssPerPixel } from "./PixelScale.js";
 interface PixelSceneProps {
   width: number;
   height: number;
-  // Quadros por segundo da cena (8 a 12 para sprites, CLAUDE.md seção 2).
+  // quadros por segundo (8 a 12 para sprites)
   fps: number;
   // Desenha um quadro completo; `frame` incrementa a cada passo do timer.
   draw: (ctx: Ctx, frame: number) => void;
