@@ -121,8 +121,6 @@ export interface AppConfig {
     sources: Record<StreamingServiceId, StreamingSourceConfig>;
   };
   usage: {
-    source: "file";
-    path: string;
     providers: Record<string, { enabled: boolean }>;
     customProviders: ProviderSpec[];
     // Limite mensal de tokens por provedor, definido por você (0 = sem limite).

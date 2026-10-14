@@ -56,8 +56,6 @@ export const DEFAULT_CONFIG: AppConfig = {
     },
   },
   usage: {
-    source: "file",
-    path: "~/.config/geek-panel/usage.json",
     providers: {
       openai: { enabled: false },
       anthropic: { enabled: false },
