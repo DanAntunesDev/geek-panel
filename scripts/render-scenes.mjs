@@ -1,5 +1,5 @@
 // Renderiza as cenas com dados de exemplo e salva PNGs ampliados.
-// Uso: node scripts/render-scenes.mjs <pasta-de-saida> [escala]
+// Uso: node scripts/render-scenes.mjs <pasta-de-saida> [escala] [arquivo-de-cenas.json]
 import { build } from "esbuild";
 import { chromium } from "playwright-core";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -19,7 +19,7 @@ await page.setContent(`<style>@font-face{font-family:"Press Start 2P";src:url(da
 await page.addScriptTag({ path: path.join(out, "scenes.js") });
 await page.evaluate(() => Scenes.ensureFont());
 
-const shots = JSON.parse(readFileSync("scripts/scene-shots.json", "utf-8"));
+const shots = JSON.parse(readFileSync(process.argv[4] ?? "scripts/scene-shots.json", "utf-8"));
 for (const shot of shots) {
   const dataUrl = await page.evaluate(
     ({ shot, scale }) => {

@@ -287,7 +287,9 @@
    "controlsEnabled": false,
    "needleStep": 0,
    "spin": 0,
-   "frame": 0
+   "frame": 0,
+   "vinylOffset": 0,
+   "seed": 0
   }
  },
  {
@@ -303,7 +305,9 @@
    "controlsEnabled": false,
    "needleStep": 0,
    "spin": 0,
-   "frame": 14
+   "frame": 14,
+   "vinylOffset": 0,
+   "seed": 0
   }
  },
  {
@@ -319,7 +323,9 @@
    "controlsEnabled": true,
    "needleStep": 3,
    "spin": 13,
-   "frame": 3
+   "frame": 3,
+   "vinylOffset": 0,
+   "seed": 0
   }
  },
  {
@@ -335,7 +341,9 @@
    "controlsEnabled": true,
    "needleStep": 3,
    "spin": 19,
-   "frame": 9
+   "frame": 9,
+   "vinylOffset": 0,
+   "seed": 0
   }
  }
 ]
