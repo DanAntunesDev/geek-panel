@@ -3,6 +3,7 @@ import { STREAMING_SERVICES } from "../../../shared/providers.js";
 import type { AppConfig, PlaybackState, SecretStatus, StreamingServiceId } from "../../../shared/types.js";
 import { AuthControls, describeError, NoticeLine, useAuth, type Notice } from "./auth.js";
 import { notify } from "./toast.js";
+import { Help } from "./Help.js";
 import { Check, Field } from "./ui.js";
 
 type Config = AppConfig;
@@ -146,7 +147,10 @@ export function MediaModule({ config, setConfig, persist }: { config: Config; se
       </Check>
       <p className="cfg-note">Agora: {systemLine}</p>
 
-      <h3 className="cfg-sub">SPOTIFY</h3>
+      <h3 className="cfg-sub">
+        SPOTIFY
+        <Help topic="spotify" />
+      </h3>
       <div className="cfg-service">
         <AuthControls
           auth={spotify}
@@ -162,7 +166,10 @@ export function MediaModule({ config, setConfig, persist }: { config: Config; se
         <LinkField service="spotify" url={media.sources.spotify.url} enabled={media.sources.spotify.enabled} onChange={(patch) => setSource("spotify", patch)} persist={persist} />
       </div>
 
-      <h3 className="cfg-sub">CONTA GOOGLE (YOUTUBE E YOUTUBE MUSIC)</h3>
+      <h3 className="cfg-sub">
+        CONTA GOOGLE (YOUTUBE E YOUTUBE MUSIC)
+        <Help topic="google" />
+      </h3>
       <div className="cfg-service">
         <AuthControls
           auth={google}
@@ -212,7 +219,10 @@ export function MediaModule({ config, setConfig, persist }: { config: Config; se
 
       {(["youtubeMusic", "youtube"] as const).map((id) => (
         <div key={id}>
-          <h3 className="cfg-sub">{label(id).toUpperCase()}</h3>
+          <h3 className="cfg-sub">
+            {label(id).toUpperCase()}
+            <Help topic="link" />
+          </h3>
           <div className="cfg-service">
             <LinkField service={id} url={media.sources[id].url} enabled={media.sources[id].enabled} onChange={(patch) => setSource(id, patch)} persist={persist} />
           </div>

@@ -74,13 +74,13 @@ export function ConfigPanel() {
     <div className="cfg">
       <Toaster />
       <div className="cfg-inner">
-        <Module title="DISPLAY REMOTO">
+        <Module title="DISPLAY REMOTO" help="device">
           <DeviceModule config={config} setConfig={update} persist={() => persist()} />
         </Module>
 
         <Divider />
 
-        <Module title="APARÊNCIA">
+        <Module title="APARÊNCIA" help="appearance">
           <ThemeModule config={config} setConfig={update} />
         </Module>
 
@@ -106,7 +106,7 @@ export function ConfigPanel() {
 
         <Divider />
 
-        <Module title="ROTAÇÃO DAS TELAS">
+        <Module title="ROTAÇÃO DAS TELAS" help="rotation">
           <Segmented
             label="Modo"
             value={config.rotation.mode}
@@ -138,7 +138,7 @@ export function ConfigPanel() {
 
         <Divider />
 
-        <Module title="RELÓGIO">
+        <Module title="RELÓGIO" help="clock">
           <Segmented
             label="Estilo"
             value={config.clock.style}
@@ -163,7 +163,7 @@ export function ConfigPanel() {
 
         <Divider />
 
-        <Module title="AGENDA">
+        <Module title="AGENDA" help="calendar">
           <AgendaModule config={config} setConfig={update} persist={() => persist()} />
         </Module>
 

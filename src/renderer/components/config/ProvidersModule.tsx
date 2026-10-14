@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { allProviders, BUILTIN_PROVIDERS, USAGE_PROVIDERS } from "../../../shared/providers.js";
 import type { AppConfig, AuthStyle, KeyCheck, ProviderSpec, SecretStatus } from "../../../shared/types.js";
+import { Help } from "./Help.js";
 import { describeError } from "./auth.js";
 import { act, notify } from "./toast.js";
 import { Check, Chip, Field, NumberField, Segmented } from "./ui.js";
@@ -106,7 +107,10 @@ function ProviderRow({
   return (
     <div className="cfg-service">
       <div className="cfg-service-head">
-        <h4>{label.toUpperCase()}</h4>
+        <h4>
+          {label.toUpperCase()}
+          <Help topic={id === "openai" || id === "anthropic" || id === "gemini" ? id : "providers"} />
+        </h4>
         <VerdictChip verdict={verdict} status={status} />
       </div>
       <Check checked={enabled} onChange={onEnabled}>
@@ -283,7 +287,10 @@ export function ProvidersModule({
 
   return (
     <>
-      <p className="cfg-note">As chaves ficam no cofre do sistema e nunca voltam para esta tela.</p>
+      <p className="cfg-note">
+        As chaves ficam no cofre do sistema e nunca voltam para esta tela.
+        <Help topic="providers" />
+      </p>
       {allProviders(config.usage).map((provider) => (
         <ProviderRow
           key={provider.id}

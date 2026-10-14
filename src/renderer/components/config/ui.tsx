@@ -1,9 +1,14 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { Help } from "./Help.js";
+import type { HELP } from "./helpTopics.js";
 
-export function Module({ title, children }: { title: string; children: ReactNode }) {
+export function Module({ title, help, children }: { title: string; help?: keyof typeof HELP; children: ReactNode }) {
   return (
     <section>
-      <h2 className="cfg-title">{title}</h2>
+      <h2 className="cfg-title">
+        {title}
+        {help ? <Help topic={help} /> : null}
+      </h2>
       {children}
     </section>
   );
