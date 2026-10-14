@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { allProviders, BUILTIN_PROVIDERS, USAGE_PROVIDERS } from "../../../shared/providers.js";
 import type { AppConfig, AuthStyle, KeyCheck, ProviderSpec, SecretStatus } from "../../../shared/types.js";
+import { describeError } from "./auth.js";
+import { act, notify } from "./toast.js";
 import { Check, Chip, Field, Segmented } from "./ui.js";
 
 type Verdict = KeyCheck | "checking" | null;
@@ -52,22 +54,30 @@ function ProviderRow({
       await window.painelApi.setSecret(usageName, usageInput);
       setUsageStatus(await window.painelApi.getSecretStatus(usageName));
       setUsageInput("");
+      notify("ok", `chave de administração de ${label} guardada`);
     } catch (err) {
-      setError((err instanceof Error ? err.message : "falha").replace(/^Error invoking remote method '[^']+': (Error: )?/, ""));
+      setError(describeError(err));
+      notify("err", describeError(err));
     }
   }
 
   async function clearUsageKey() {
-    await window.painelApi.clearSecret(usageName);
-    setUsageStatus({ configured: false, hint: null });
+    await act("chave de administração apagada", async () => {
+      await window.painelApi.clearSecret(usageName);
+      setUsageStatus({ configured: false, hint: null });
+    });
   }
 
   async function validate() {
     setVerdict("checking");
     try {
-      setVerdict(await window.painelApi.validateProvider(id));
+      const result = await window.painelApi.validateProvider(id);
+      setVerdict(result);
+      if (result.state === "valid" || result.state === "limited") notify("ok", `${label}: chave ${result.state === "valid" ? "válida" : "válida, com limite"}`);
+      else notify("err", `${label}: ${result.state === "invalid" ? "chave recusada pelo provedor" : result.reason}`);
     } catch {
       setVerdict({ state: "error", reason: "falha ao testar" });
+      notify("err", `${label}: falha ao testar a chave`);
     }
   }
 
@@ -80,14 +90,17 @@ function ProviderRow({
       await validate();
     } catch (err) {
       setVerdict(null);
-      setError((err instanceof Error ? err.message : "falha").replace(/^Error invoking remote method '[^']+': (Error: )?/, ""));
+      setError(describeError(err));
+      notify("err", describeError(err));
     }
   }
 
   async function remove() {
-    await window.painelApi.clearSecret(secretName);
-    setStatus({ configured: false, hint: null });
-    setVerdict(null);
+    await act(`chave de ${label} apagada`, async () => {
+      await window.painelApi.clearSecret(secretName);
+      setStatus({ configured: false, hint: null });
+      setVerdict(null);
+    });
   }
 
   return (
@@ -110,15 +123,15 @@ function ProviderRow({
             onChange={(event) => setInput(event.target.value)}
           />
         </Field>
-        <button className="px-btn px-btn-primary" type="button" disabled={input.trim() === ""} onClick={save}>
+        <button className="px-btn px-btn-primary" type="button" onClick={input.trim() === "" ? () => notify("err", "cole a chave antes de guardar") : save}>
           GUARDAR E TESTAR
         </button>
       </div>
       <div className="cfg-row">
-        <button className="px-btn" type="button" disabled={!status.configured || verdict === "checking"} onClick={validate}>
+        <button className="px-btn" type="button" disabled={verdict === "checking"} onClick={status.configured ? validate : () => notify("err", "nenhuma chave guardada para testar")}>
           TESTAR CHAVE GUARDADA
         </button>
-        <button className="px-btn" type="button" disabled={!status.configured} onClick={remove}>
+        <button className="px-btn" type="button" onClick={status.configured ? remove : () => notify("err", "não há chave guardada para apagar")}>
           APAGAR CHAVE
         </button>
         {onRemove ? (
@@ -142,7 +155,7 @@ function ProviderRow({
                 onChange={(event) => setUsageInput(event.target.value)}
               />
             </Field>
-            <button className="px-btn px-btn-primary" type="button" disabled={usageInput.trim() === ""} onClick={saveUsageKey}>
+            <button className="px-btn px-btn-primary" type="button" onClick={usageInput.trim() === "" ? () => notify("err", "cole a chave de administração antes de guardar") : saveUsageKey}>
               GUARDAR
             </button>
             {usageStatus.configured ? (
@@ -204,8 +217,10 @@ function AddProvider({ config, persist }: { config: AppConfig; persist: (next: A
       setDraft(EMPTY_DRAFT);
       setOpen(false);
       setError(null);
+      notify("ok", `provedor ${spec.label} adicionado`);
     } catch (err) {
-      setError(err instanceof Error ? err.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, "") : "falha");
+      setError(describeError(err));
+      notify("err", describeError(err));
     }
   }
 
@@ -241,7 +256,7 @@ function AddProvider({ config, persist }: { config: AppConfig; persist: (next: A
         </div>
       ) : null}
       <div className="cfg-row" style={{ marginTop: 12 }}>
-        <button className="px-btn px-btn-primary" type="button" disabled={draft.label.trim() === ""} onClick={add}>
+        <button className="px-btn px-btn-primary" type="button" onClick={draft.label.trim() === "" ? () => notify("err", "dê um nome ao provedor") : add}>
           ADICIONAR
         </button>
         <button className="px-btn" type="button" onClick={() => setOpen(false)}>
@@ -265,9 +280,11 @@ export function ProvidersModule({
   const builtinIds = BUILTIN_PROVIDERS.map((provider) => provider.id);
 
   async function removeCustom(id: string) {
-    await window.painelApi.clearSecret(`provider:${id}`).catch(() => undefined);
-    const { [id]: _removed, ...providers } = config.usage.providers;
-    await persist({ ...config, usage: { ...config.usage, providers, customProviders: config.usage.customProviders.filter((provider) => provider.id !== id) } });
+    await act("provedor removido", async () => {
+      await window.painelApi.clearSecret(`provider:${id}`).catch(() => undefined);
+      const { [id]: _removed, ...providers } = config.usage.providers;
+      await persist({ ...config, usage: { ...config.usage, providers, customProviders: config.usage.customProviders.filter((provider) => provider.id !== id) } });
+    });
   }
 
   return (

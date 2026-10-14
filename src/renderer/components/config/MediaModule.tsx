@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { STREAMING_SERVICES } from "../../../shared/providers.js";
 import type { AppConfig, PlaybackState, SecretStatus, StreamingServiceId } from "../../../shared/types.js";
 import { AuthControls, describeError, NoticeLine, useAuth, type Notice } from "./auth.js";
+import { notify } from "./toast.js";
 import { Check, Field } from "./ui.js";
 
 type Config = AppConfig;
@@ -28,29 +29,39 @@ function LinkField({
   const [checking, setChecking] = useState(false);
   const [playing, setPlaying] = useState(false);
 
+  function show(next: NonNullable<Notice>) {
+    setNotice(next);
+    notify(next.tone, next.text);
+  }
+
   async function play() {
+    if (url.trim() === "") return show({ tone: "err", text: "cole um link primeiro" });
+    if (!enabled) return show({ tone: "err", text: 'marque "Usar esta fonte no player" antes de tocar' });
     setPlaying(true);
     setNotice(null);
     try {
       await persist();
       await window.painelApi.playUrl(url);
-      setNotice({ tone: "ok", text: "tocando no player" });
+      show({ tone: "ok", text: "tocando no player" });
     } catch (error) {
-      setNotice({ tone: "err", text: describeError(error) });
+      show({ tone: "err", text: describeError(error) });
     } finally {
       setPlaying(false);
     }
   }
 
   async function validate() {
+    if (url.trim() === "") return show({ tone: "err", text: "cole um link primeiro" });
     setChecking(true);
     setNotice(null);
     try {
       const result = await window.painelApi.resolveMediaUrl(url);
-      if (!result.ok) setNotice({ tone: "err", text: LINK_ERRORS[result.reason] });
+      if (!result.ok) show({ tone: "err", text: LINK_ERRORS[result.reason] });
       else if (service !== "youtubeMusic" && result.service !== service && !(service === "youtube" && result.service === "youtubeMusic")) {
-        setNotice({ tone: "err", text: "este link é de outro serviço" });
-      } else setNotice({ tone: "ok", text: `${result.title}${result.author ? ` — ${result.author}` : ""}` });
+        show({ tone: "err", text: "este link é de outro serviço" });
+      } else show({ tone: "ok", text: `link válido: ${result.title}${result.author ? ` — ${result.author}` : ""}` });
+    } catch (error) {
+      show({ tone: "err", text: describeError(error) });
     } finally {
       setChecking(false);
     }
@@ -74,10 +85,10 @@ function LinkField({
             }}
           />
         </Field>
-        <button className="px-btn" type="button" disabled={url.trim() === "" || checking} onClick={validate}>
+        <button className="px-btn" type="button" disabled={checking} onClick={validate}>
           {checking ? "…" : "VALIDAR"}
         </button>
-        <button className="px-btn px-btn-primary" type="button" disabled={url.trim() === "" || !enabled || playing} onClick={play}>
+        <button className="px-btn px-btn-primary" type="button" disabled={playing} onClick={play}>
           {playing ? "…" : "TOCAR"}
         </button>
       </div>
@@ -113,8 +124,10 @@ export function MediaModule({ config, setConfig, persist }: { config: Config; se
       setSecret(await window.painelApi.getSecretStatus("google:clientSecret"));
       setSecretInput("");
       setSecretNotice({ tone: "ok", text: "segredo guardado no cofre do sistema" });
+      notify("ok", "segredo guardado no cofre do sistema");
     } catch (error) {
       setSecretNotice({ tone: "err", text: describeError(error) });
+      notify("err", describeError(error));
     }
   }
 
@@ -173,7 +186,7 @@ export function MediaModule({ config, setConfig, persist }: { config: Config; se
               onChange={(event) => setSecretInput(event.target.value)}
             />
           </Field>
-          <button className="px-btn" type="button" disabled={secretInput.trim() === ""} onClick={saveSecret}>
+          <button className="px-btn" type="button" onClick={secretInput.trim() === "" ? () => notify("err", "digite o segredo antes de guardar") : saveSecret}>
             GUARDAR
           </button>
           {secret.configured ? (
@@ -181,8 +194,13 @@ export function MediaModule({ config, setConfig, persist }: { config: Config; se
               className="px-btn"
               type="button"
               onClick={async () => {
-                await window.painelApi.clearSecret("google:clientSecret");
-                setSecret({ configured: false, hint: null });
+                try {
+                  await window.painelApi.clearSecret("google:clientSecret");
+                  setSecret({ configured: false, hint: null });
+                  notify("ok", "segredo removido");
+                } catch (error) {
+                  notify("err", describeError(error));
+                }
               }}
             >
               REMOVER
