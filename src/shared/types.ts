@@ -99,6 +99,10 @@ export interface AppConfig {
     showSeconds: boolean;
     hour12: boolean;
   };
+  theme: {
+    // Cor de destaque (#RRGGBB), no app e no aparelho.
+    accent: string;
+  };
   app: {
     // Abre escondido, na bandeja, quando o computador liga.
     startWithSystem: boolean;

@@ -22,13 +22,13 @@ export function message(type: number, body: Uint8Array = new Uint8Array(0)): Buf
   return out;
 }
 
-export function configMessage(): Buffer {
-  const body = Buffer.alloc(4 + DEVICE_PALETTE.length * 2);
+export function configMessage(palette: readonly string[] = DEVICE_PALETTE): Buffer {
+  const body = Buffer.alloc(4 + palette.length * 2);
   body[0] = FRAME_SIZE;
   body[1] = FRAME_SIZE;
   body[2] = SCALE;
-  body[3] = DEVICE_PALETTE.length;
-  DEVICE_PALETTE.forEach((hex, index) => body.writeUInt16BE(rgb565(hex), 4 + index * 2));
+  body[3] = palette.length;
+  palette.forEach((hex, index) => body.writeUInt16BE(rgb565(hex), 4 + index * 2));
   return message(MESSAGE.config, body);
 }
 

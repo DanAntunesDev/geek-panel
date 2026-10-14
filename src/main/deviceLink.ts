@@ -38,6 +38,7 @@ export class DeviceLink extends EventEmitter {
   private frame: Buffer | null = null;
   private lastFrameSent: Buffer | null = null;
   private brightness: number | null = null;
+  private palette: readonly string[] | undefined;
   private lastHeard = 0;
   private lastSent = 0;
   private current: DeviceLinkStatus = { running: false, connected: false, address: null, since: null, framesSent: 0, error: null, rejected: null };
@@ -110,6 +111,14 @@ export class DeviceLink extends EventEmitter {
     this.write(message(MESSAGE.brightness, Uint8Array.of(this.brightness)));
   }
 
+  // Cor nova: o aparelho recebe a paleta de novo e o quadro inteiro.
+  setPalette(palette: readonly string[]): void {
+    this.palette = palette;
+    if (!this.socket) return;
+    this.write(configMessage(palette));
+    this.sendFrame(true);
+  }
+
   private accept(socket: net.Socket): void {
     socket.setNoDelay(true);
     socket.setKeepAlive(true, 5000);
@@ -163,7 +172,7 @@ export class DeviceLink extends EventEmitter {
     this.lastHeard = Date.now();
     this.lastFrameSent = null;
 
-    this.write(configMessage());
+    this.write(configMessage(this.palette));
     if (this.brightness !== null) this.write(message(MESSAGE.brightness, Uint8Array.of(this.brightness)));
     this.sendFrame(true);
     this.update({

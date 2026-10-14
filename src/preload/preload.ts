@@ -56,6 +56,11 @@ const api = {
     ipcRenderer.on(IPC_CHANNELS.deviceStateUpdated, listener);
     return () => ipcRenderer.removeListener(IPC_CHANNELS.deviceStateUpdated, listener);
   },
+  onThemeUpdate: (callback: (accent: string) => void): (() => void) => {
+    const listener = (_event: unknown, accent: string) => callback(accent);
+    ipcRenderer.on(IPC_CHANNELS.themeUpdated, listener);
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.themeUpdated, listener);
+  },
   pushDeviceFrame: (pixels: Uint8Array): void => ipcRenderer.send(IPC_CHANNELS.deviceFrame, pixels),
   testDevice: (): Promise<DeviceCheck> => ipcRenderer.invoke(IPC_CHANNELS.testDevice),
   getPlayback: (): Promise<PlaybackState> => ipcRenderer.invoke(IPC_CHANNELS.getPlayback),

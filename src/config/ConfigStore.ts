@@ -4,6 +4,7 @@
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { BUILTIN_PROVIDERS, PROVIDER_ID_PATTERN } from "../shared/providers.js";
+import { ACCENT_PATTERN, DEFAULT_ACCENT } from "../shared/theme.js";
 import type { AppConfig, ProviderSpec, StreamingServiceId } from "../shared/types.js";
 
 export const DEFAULT_CONFIG: AppConfig = {
@@ -33,6 +34,9 @@ export const DEFAULT_CONFIG: AppConfig = {
     style: "digital",
     showSeconds: true,
     hour12: false,
+  },
+  theme: {
+    accent: DEFAULT_ACCENT,
   },
   app: {
     startWithSystem: false,
@@ -94,6 +98,7 @@ export function validateConfig(input: unknown): AppConfig {
     device: { ...DEFAULT_CONFIG.device, ...candidate.device },
     server: { ...DEFAULT_CONFIG.server, ...candidate.server },
     rotation: { ...DEFAULT_CONFIG.rotation, ...migrateRotation(candidate.rotation) },
+    theme: { ...DEFAULT_CONFIG.theme, ...candidate.theme },
     app: { ...DEFAULT_CONFIG.app, ...candidate.app },
     agenda: { ...DEFAULT_CONFIG.agenda, ...candidate.agenda },
     clock: { ...DEFAULT_CONFIG.clock, ...candidate.clock },
@@ -148,6 +153,10 @@ export function validateConfig(input: unknown): AppConfig {
   if (typeof merged.device.pairingCode !== "string" || !/^[0-9A-Za-z]{0,16}$/.test(merged.device.pairingCode)) {
     throw new ConfigValidationError("código de pareamento inválido (até 16 letras ou números)");
   }
+  if (typeof merged.theme.accent !== "string" || !ACCENT_PATTERN.test(merged.theme.accent)) {
+    throw new ConfigValidationError("cor de destaque inválida (use #RRGGBB)");
+  }
+  merged.theme.accent = merged.theme.accent.toUpperCase();
   if (typeof merged.app.startWithSystem !== "boolean") {
     throw new ConfigValidationError("opção de iniciar com o sistema inválida");
   }

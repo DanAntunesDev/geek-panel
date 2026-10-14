@@ -73,6 +73,7 @@ export function registerIpcHandlers(window: BrowserWindow, configStore: ConfigSt
         void agenda.refresh();
         void usage.refresh();
         void device?.applyConfig(saved);
+        broadcast(IPC_CHANNELS.themeUpdated, saved.theme.accent);
         void deps.autostart(saved.app.startWithSystem).catch(() => undefined);
         return saved;
       } catch (error) {

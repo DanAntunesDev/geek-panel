@@ -1,6 +1,7 @@
 import { randomInt } from "node:crypto";
 import { BrowserWindow, ipcMain } from "electron";
 import { IPC_CHANNELS } from "../shared/ipcChannels.js";
+import { themePalette } from "../shared/theme.js";
 import { DEVICE_PALETTE, FRAME_SIZE } from "../shared/deviceProtocol.js";
 import type { AgendaState, AppConfig, DeviceLinkStatus, DeviceState, PlaybackState } from "../shared/types.js";
 import { DeviceLink } from "./deviceLink.js";
@@ -90,6 +91,7 @@ export function createDeviceSystem(deps: Deps) {
   async function applyConfig(next: AppConfig): Promise<void> {
     config = next;
     link.setBrightness(next.device.brightness);
+    link.setPalette(themePalette(next.theme.accent));
     scheduler.tick();
     if (next.device.autoConnect) await link.start().catch(() => undefined);
     else if (link.status().running) await link.stop();

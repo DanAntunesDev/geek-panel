@@ -15,6 +15,7 @@ export const IPC_CHANNELS = {
   getDeviceState: "device:state",
   deviceStateUpdated: "device:state-updated",
   deviceFrame: "device:frame",
+  themeUpdated: "theme:updated",
   getUsage: "usage:get",
   usageUpdated: "usage:updated",
   refreshUsage: "usage:refresh",
