@@ -55,6 +55,8 @@ export interface PlayerView {
   playing: boolean;
   positionSeconds: number;
   durationSeconds: number;
+  // 0 a 1; null quando o player não aceita volume
+  volume: number | null;
   pressed: ButtonId | null;
   controlsEnabled: boolean;
   needleStep: number;
@@ -111,6 +113,39 @@ const ICONS: Record<ButtonId | "play" | "pause", PixelGrid> = {
   play: triangle("left", 9),
   pause: join(bar(3, 9), gap(2, 9), bar(3, 9)),
 };
+
+// Volume entre os tempos: alto-falante (mudo) e 8 degraus.
+export const VOLUME_STEPS = 8;
+const SPEAKER_BOX = { x: 38, y: 90, w: 9, h: 10 };
+const VOLUME_BAR = { x: 48, y: 91, stepW: 3, gap: 1 };
+const SPEAKER: PixelGrid = ["...K...", "..KK.K.", "KKKK..K", "KKKK..K", "KKKK..K", "..KK.K.", "...K..."];
+const SPEAKER_MUTED: PixelGrid = ["...K...", "..KK...", "KKKK...", "KKKK...", "KKKK...", "..KK...", "...K..."];
+
+export type VolumeHit = { kind: "mute" } | { kind: "level"; level: number };
+
+export function volumeAt(x: number, y: number): VolumeHit | null {
+  if (y < SPEAKER_BOX.y || y >= SPEAKER_BOX.y + SPEAKER_BOX.h) return null;
+  if (x >= SPEAKER_BOX.x && x < SPEAKER_BOX.x + SPEAKER_BOX.w) return { kind: "mute" };
+  const width = VOLUME_STEPS * (VOLUME_BAR.stepW + VOLUME_BAR.gap);
+  if (x < VOLUME_BAR.x - 1 || x >= VOLUME_BAR.x + width) return null;
+  const step = Math.min(VOLUME_STEPS, Math.max(1, Math.floor((x - VOLUME_BAR.x) / (VOLUME_BAR.stepW + VOLUME_BAR.gap)) + 1));
+  return { kind: "level", level: step / VOLUME_STEPS };
+}
+
+function drawVolume(ctx: Ctx, view: PlayerView): void {
+  const enabled = view.volume !== null && view.controlsEnabled;
+  const level = view.volume ?? 0;
+  const filled = Math.round(level * VOLUME_STEPS);
+  const colors = enabled ? SPRITE_COLORS : { ...SPRITE_COLORS, K: PALETTE.mid };
+  sprite(ctx, filled === 0 ? SPEAKER_MUTED : SPEAKER, colors, SPEAKER_BOX.x + 1, 92);
+  for (let step = 0; step < VOLUME_STEPS; step += 1) {
+    const height = 2 + step;
+    const x = VOLUME_BAR.x + step * (VOLUME_BAR.stepW + VOLUME_BAR.gap);
+    const on = enabled && step < filled;
+    rect(ctx, x, VOLUME_BAR.y + 9 - height, VOLUME_BAR.stepW, height, on ? PALETTE.ink : PALETTE.surface);
+    if (on) rect(ctx, x, VOLUME_BAR.y + 9 - height, VOLUME_BAR.stepW, 1, PALETTE.accent);
+  }
+}
 
 function formatTime(seconds: number, unknown = false): string {
   if (unknown) return "--:--";
@@ -401,6 +436,8 @@ export function drawPlayer(ctx: Ctx, view: PlayerView): void {
   const total = formatTime(view.durationSeconds, view.durationSeconds <= 0);
   const totalMask = textMask(total);
   drawMask(ctx, totalMask, 116 - maskInkWidth(totalMask), 92, PALETTE.ink);
+
+  drawVolume(ctx, view);
 
   for (const box of BUTTONS) {
     const icon = box.id === "toggle" && view.playing ? ICONS.pause : ICONS[box.id];

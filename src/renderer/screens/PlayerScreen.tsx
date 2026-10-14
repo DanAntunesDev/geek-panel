@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { MediaState, PlayerCommand } from "../../shared/types.js";
 import { PixelScene } from "../pixel/PixelScene.js";
-import { buttonAt, drawPlayer, NEEDLE_STEPS, ringFraction, SCENE_SIZE, type ButtonId } from "./playerScene.js";
+import { buttonAt, drawPlayer, NEEDLE_STEPS, ringFraction, SCENE_SIZE, volumeAt, type ButtonId } from "./playerScene.js";
 import { anchorPosition } from "./positionClock.js";
 import { seedOf, SKIP_OUT_FRAMES, swapAt, swapDone, trackKey } from "./vinylSwap.js";
 
@@ -28,6 +28,9 @@ export function PlayerScreen() {
   const mediaRef = useRef<MediaState | null>(null);
   const playingRef = useRef(false);
   const lastReported = useRef<number | null>(null);
+  // volume pedido por clique vale até a fonte confirmar (ou por 3 s)
+  const volumeAsked = useRef<{ level: number; until: number } | null>(null);
+  const lastAudible = useRef(0.5);
   const swap = useRef({
     ready: false,
     key: null as string | null,
@@ -91,6 +94,14 @@ export function PlayerScreen() {
     });
   }, []);
 
+  const currentVolume = (): number | null => {
+    const asked = volumeAsked.current;
+    if (asked && asked.until > Date.now()) return asked.level;
+    const reported = mediaRef.current?.volume;
+    if (typeof reported === "number" && reported > 0) lastAudible.current = reported;
+    return typeof reported === "number" ? reported : null;
+  };
+
   const draw = useCallback(
     (ctx: CanvasRenderingContext2D, frame: number) => {
       const state = anim.current;
@@ -127,6 +138,7 @@ export function PlayerScreen() {
         playing: playingRef.current,
         positionSeconds: timeline?.ringHidden ? 0 : state.positionTicks / FPS,
         durationSeconds: duration,
+        volume: currentVolume(),
         vinylOffset: timeline?.vinylOffset ?? 0,
         seed: seedOf(change.shown.title, change.shown.artist),
         pressed,
@@ -140,6 +152,19 @@ export function PlayerScreen() {
   );
 
   const handleDown = (x: number, y: number) => {
+    const volume = volumeAt(x, y);
+    if (volume) {
+      const now = currentVolume();
+      if (now === null || !mediaRef.current) {
+        setNotice("este player não deixa mudar o volume");
+        return;
+      }
+      const level = volume.kind === "level" ? volume.level : now > 0 ? 0 : lastAudible.current;
+      volumeAsked.current = { level, until: Date.now() + 3000 };
+      send({ type: "volume", level });
+      return;
+    }
+
     const fraction = ringFraction(x, y);
     const duration = mediaRef.current?.durationSeconds ?? 0;
     if (fraction !== null && duration > 0) {
