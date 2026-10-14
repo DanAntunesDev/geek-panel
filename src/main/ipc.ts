@@ -6,7 +6,6 @@ import type { AuthService, PlaybackState, PlayerCommand } from "../shared/types.
 import { AgendaService } from "./agendaSource.js";
 import { createDeviceSystem, type DeviceSystem } from "./deviceSystem.js";
 import { probeDevice } from "./deviceProbe.js";
-import type { RunningServer } from "./httpServer.js";
 import { resolveMediaUrl } from "./mediaUrl.js";
 import type { OAuthManager } from "./oauth.js";
 import { callDevice } from "./deviceAdmin.js";
@@ -51,7 +50,7 @@ function publicMessage(error: unknown): string {
   return error instanceof Error ? error.message : "falha desconhecida";
 }
 
-export function registerIpcHandlers(window: BrowserWindow, configStore: ConfigStore, server: RunningServer, deps: IpcDependencies): void {
+export function registerIpcHandlers(window: BrowserWindow, configStore: ConfigStore, deps: IpcDependencies): void {
   const trusted = <T extends unknown[], R>(handler: (...args: T) => Promise<R> | R) =>
     async (event: IpcMainInvokeEvent, ...args: T): Promise<R> => {
       assertTrustedSender(event, window);
@@ -87,7 +86,6 @@ export function registerIpcHandlers(window: BrowserWindow, configStore: ConfigSt
     }),
   );
 
-  ipcMain.handle(IPC_CHANNELS.getServerStatus, trusted(() => ({ address: server.address, port: server.port })));
 
   // Agenda: lê o Google Agenda e dispara os lembretes (aviso do sistema + tela do app).
   const send = (channel: string, payload: unknown) => {

@@ -98,11 +98,6 @@ export interface AppConfig {
     // Código que o aparelho precisa informar para receber as telas (vazio = qualquer um).
     pairingCode: string;
   };
-  server: {
-    lanMode: boolean;
-    lanInterface: string | null;
-    port: number;
-  };
   rotation: {
     mode: ManualMode;
     playerSeconds: number;

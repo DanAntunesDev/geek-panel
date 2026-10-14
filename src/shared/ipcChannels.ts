@@ -4,7 +4,6 @@
 export const IPC_CHANNELS = {
   getConfig: "config:get",
   saveConfig: "config:save",
-  getServerStatus: "server:status",
   getAgenda: "agenda:get",
   agendaUpdated: "agenda:updated",
   agendaReminder: "agenda:reminder",

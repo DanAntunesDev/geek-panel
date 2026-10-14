@@ -24,8 +24,6 @@ import type {
 const api = {
   getConfig: (): Promise<AppConfig> => ipcRenderer.invoke(IPC_CHANNELS.getConfig),
   saveConfig: (config: AppConfig): Promise<AppConfig> => ipcRenderer.invoke(IPC_CHANNELS.saveConfig, config),
-  getServerStatus: (): Promise<{ address: string; port: number }> =>
-    ipcRenderer.invoke(IPC_CHANNELS.getServerStatus),
   getAgenda: (): Promise<AgendaState> => ipcRenderer.invoke(IPC_CHANNELS.getAgenda),
   refreshAgenda: (): Promise<AgendaState> => ipcRenderer.invoke(IPC_CHANNELS.refreshAgenda),
   onAgendaUpdate: (callback: (state: AgendaState) => void): (() => void) => {

@@ -33,14 +33,12 @@ const ROTATION_FIELDS: { key: RotationKey; screen: DisplayMode; label: string }[
 
 export function ConfigPanel() {
   const [config, setConfig] = useState<AppConfig | null>(null);
-  const [status, setStatus] = useState<{ address: string; port: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
     window.painelApi.getConfig().then(setConfig);
-    window.painelApi.getServerStatus().then(setStatus);
   }, []);
 
   if (!config) return <p className="cfg">Carregando configuração…</p>;
@@ -82,26 +80,6 @@ export function ConfigPanel() {
 
         <Module title="APARÊNCIA" help="appearance">
           <ThemeModule config={config} setConfig={update} />
-        </Module>
-
-        <Divider />
-
-        <Module title="SERVIDOR LOCAL">
-          <Check checked={config.server.lanMode} onChange={(value) => update({ ...config, server: { ...config.server, lanMode: value } })}>
-            Aceitar conexões de outros aparelhos da rede (modo LAN)
-          </Check>
-          {config.server.lanMode ? (
-            <div className="cfg-row">
-              <Field label="Interface de rede">
-                <input
-                  className="px-input"
-                  value={config.server.lanInterface ?? ""}
-                  onChange={(event) => update({ ...config, server: { ...config.server, lanInterface: event.target.value || null } })}
-                />
-              </Field>
-            </div>
-          ) : null}
-          {status ? <p className="cfg-note">Ativo em {status.address}:{status.port}</p> : null}
         </Module>
 
         <Divider />

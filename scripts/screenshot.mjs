@@ -13,11 +13,7 @@ mkdirSync(outDir, { recursive: true });
 const env = { ...process.env };
 const configDir = path.join(outDir, "config");
 mkdirSync(configDir, { recursive: true });
-// Porta própria para não colidir com uma instância já aberta.
-writeFileSync(
-  path.join(configDir, "config.json"),
-  JSON.stringify({ server: { port: 4700 + Math.floor(Math.random() * 200) }, ...(clockStyle ? { clock: { style: clockStyle } } : {}) }),
-);
+writeFileSync(path.join(configDir, "config.json"), JSON.stringify(clockStyle ? { clock: { style: clockStyle } } : {}));
 env.PAINEL_CONFIG_DIR = configDir;
 delete env.ELECTRON_RUN_AS_NODE;
 const app = await electron.launch({

@@ -1,4 +1,4 @@
-// Ponto de entrada do processo principal: janela, bandeja, servidor local e IPC.
+// Ponto de entrada do processo principal: janela, bandeja e IPC.
 
 import { app, BrowserWindow, Menu, safeStorage, shell } from "electron";
 import * as os from "node:os";
@@ -9,7 +9,6 @@ import { migrateLegacyConfig } from "./legacyConfig.js";
 import { OAuthManager } from "./oauth.js";
 import { SecretStore, type Cipher } from "./secretStore.js";
 import { registerIpcHandlers } from "./ipc.js";
-import { startHttpServer } from "./httpServer.js";
 import { createTray } from "./tray.js";
 import { createMainWindow } from "./window.js";
 
@@ -64,13 +63,12 @@ async function bootstrap(): Promise<void> {
 
   if (!process.env.PAINEL_CONFIG_DIR) await migrateLegacyConfig(legacyDir, configDir);
   const config = await configStore.load();
-  const server = await startHttpServer(() => config);
   // mantém o sistema de acordo com a opção salva (ex.: o app foi movido de lugar)
   await applyAutostart(config.app.startWithSystem, autostartDeps()).catch(() => undefined);
 
   mainWindow = createMainWindow(!startHidden);
   createTray(mainWindow);
-  registerIpcHandlers(mainWindow, configStore, server, {
+  registerIpcHandlers(mainWindow, configStore, {
     secrets: secretStore,
     oauth: oauthManager,
     autostart: (enabled) => applyAutostart(enabled, autostartDeps()),

@@ -16,11 +16,6 @@ export const DEFAULT_CONFIG: AppConfig = {
     brightness: 60,
     pairingCode: "",
   },
-  server: {
-    lanMode: false,
-    lanInterface: null,
-    port: 4600,
-  },
   rotation: {
     mode: "automatic",
     playerSeconds: 30,
@@ -97,7 +92,6 @@ export function validateConfig(input: unknown): AppConfig {
   const candidate = input as Partial<AppConfig>;
   const merged: AppConfig = {
     device: { ...DEFAULT_CONFIG.device, ...candidate.device },
-    server: { ...DEFAULT_CONFIG.server, ...candidate.server },
     rotation: {
       ...DEFAULT_CONFIG.rotation,
       ...migrateRotation(candidate.rotation),
@@ -137,9 +131,6 @@ export function validateConfig(input: unknown): AppConfig {
   }
   if (!Number.isInteger(merged.device.port) || merged.device.port < 1 || merged.device.port > 65535) {
     throw new ConfigValidationError("porta do display fora do intervalo permitido");
-  }
-  if (!Number.isInteger(merged.server.port) || merged.server.port < 1 || merged.server.port > 65535) {
-    throw new ConfigValidationError("porta do servidor local fora do intervalo permitido");
   }
   if (merged.device.requestTimeoutMs < 100 || merged.device.requestTimeoutMs > 10_000) {
     throw new ConfigValidationError("timeout de requisição fora do intervalo permitido");
