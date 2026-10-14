@@ -116,6 +116,8 @@ export interface AppConfig {
     // Minutos antes do início em que o lembrete dispara (ex.: 10 e 5).
     reminders: number[];
     notify: boolean;
+    // Aplicativo Google só da agenda; pode ser de outra conta que a do YouTube.
+    googleClientId: string;
   };
   media: {
     pollIntervalMs: number;

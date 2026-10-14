@@ -100,7 +100,7 @@ export function registerIpcHandlers(window: BrowserWindow, configStore: ConfigSt
   };
   const agenda = new AgendaService({
     oauth: deps.oauth,
-    clientId: async () => (await configStore.load()).media.googleClientId,
+    clientId: async () => (await configStore.load()).agenda.googleClientId,
     config: () => configStore.load(),
     onState: (state) => broadcast(IPC_CHANNELS.agendaUpdated, state),
     onReminder: (reminder) => {
@@ -278,9 +278,10 @@ export function registerIpcHandlers(window: BrowserWindow, configStore: ConfigSt
     IPC_CHANNELS.authLogin,
     trusted(async (service: unknown) => {
       const name = authService(service);
-      const { media } = await configStore.load();
+      const { media, agenda: agendaConfig } = await configStore.load();
+      const clientId = name === "spotify" ? media.spotifyClientId : name === "calendar" ? agendaConfig.googleClientId : media.googleClientId;
       try {
-        const status = await deps.oauth.login(name, name === "spotify" ? media.spotifyClientId : media.googleClientId);
+        const status = await deps.oauth.login(name, clientId);
         void agenda.refresh();
         return status;
       } catch (error) {

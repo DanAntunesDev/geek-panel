@@ -73,7 +73,7 @@ describe("AgendaService", () => {
   let requested: string[];
   let reply: { status: number; body: unknown };
 
-  const config = { ...DEFAULT_CONFIG, agenda: { enabled: true, reminders: [10, 5], notify: true } };
+  const config = { ...DEFAULT_CONFIG, agenda: { enabled: true, reminders: [10, 5], notify: true, googleClientId: "id" } };
   const connectedOauth = {
     status: async () => ({ connected: true, account: "eu@exemplo.com" }),
     accessToken: async () => "token-x",

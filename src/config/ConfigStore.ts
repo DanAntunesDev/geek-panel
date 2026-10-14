@@ -46,6 +46,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     enabled: false,
     reminders: [10, 5],
     notify: true,
+    googleClientId: "",
   },
   media: {
     pollIntervalMs: 1000,
@@ -291,6 +292,9 @@ function validateCustomProviders(list: ProviderSpec[]): void {
 function validateAgenda(agenda: AppConfig["agenda"]): void {
   if (typeof agenda.enabled !== "boolean" || typeof agenda.notify !== "boolean") {
     throw new ConfigValidationError("opções da agenda inválidas");
+  }
+  if (typeof agenda.googleClientId !== "string" || !CLIENT_ID_PATTERN.test(agenda.googleClientId)) {
+    throw new ConfigValidationError("ID do aplicativo Google da agenda inválido");
   }
   const { reminders } = agenda;
   const valid =

@@ -3,6 +3,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import * as http from "node:http";
 import type { AddressInfo } from "node:net";
+import { CALENDAR_SECRET } from "../shared/providers.js";
 import type { AuthService, AuthStatus } from "../shared/types.js";
 import type { SecretStore } from "./secretStore.js";
 
@@ -173,7 +174,7 @@ export class OAuthManager {
   ): Promise<{ access_token: string; refresh_token?: string; expires_in: number }> {
     const body = new URLSearchParams({ ...params, client_id: clientId });
     if (provider.usesClientSecret) {
-      const secret = await this.options.store.get("google:clientSecret");
+      const secret = await this.options.store.get(service === "calendar" ? CALENDAR_SECRET : "google:clientSecret");
       if (!secret) throw new Error("informe o segredo do aplicativo Google antes de conectar");
       body.set("client_secret", secret);
     }
