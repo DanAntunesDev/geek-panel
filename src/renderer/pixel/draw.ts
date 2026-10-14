@@ -7,6 +7,45 @@ export function rect(ctx: Ctx, x: number, y: number, w: number, h: number, color
   ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
 }
 
+// Elipse cheia (perspectiva: círculo visto de cima e de lado).
+export function ellipse(ctx: Ctx, cx: number, cy: number, rx: number, ry: number, color: string): void {
+  ctx.fillStyle = color;
+  const reach = Math.ceil(ry);
+  for (let dy = -reach; dy <= reach; dy += 1) {
+    const t = 1 - (dy * dy) / (ry * ry);
+    if (t < 0) continue;
+    const half = Math.round(rx * Math.sqrt(t));
+    ctx.fillRect(cx - half, cy + dy, half * 2 + 1, 1);
+  }
+}
+
+// Anel elíptico entre dois raios normalizados (1 = borda); keep filtra por ângulo.
+export function ellipseRing(
+  ctx: Ctx,
+  cx: number,
+  cy: number,
+  rx: number,
+  ry: number,
+  inner: number,
+  outer: number,
+  color: string,
+  keep?: (turn: number) => boolean,
+): void {
+  ctx.fillStyle = color;
+  const reachX = Math.ceil(rx * outer);
+  const reachY = Math.ceil(ry * outer);
+  for (let dy = -reachY; dy <= reachY; dy += 1) {
+    for (let dx = -reachX; dx <= reachX; dx += 1) {
+      const u = dx / rx;
+      const v = dy / ry;
+      const n = Math.hypot(u, v);
+      if (n > outer || n <= inner) continue;
+      if (keep && !keep((Math.atan2(u, -v) / (Math.PI * 2) + 1) % 1)) continue;
+      ctx.fillRect(cx + dx, cy + dy, 1, 1);
+    }
+  }
+}
+
 export function pixel(ctx: Ctx, x: number, y: number, color: string): void {
   rect(ctx, x, y, 1, 1, color);
 }

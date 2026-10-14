@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { MediaState, PlayerCommand } from "../../shared/types.js";
 import { PixelScene } from "../pixel/PixelScene.js";
-import { buttonAt, drawPlayer, NEEDLE_ANGLES, ringFraction, SCENE_SIZE, type ButtonId } from "./playerScene.js";
+import { buttonAt, drawPlayer, NEEDLE_STEPS, ringFraction, SCENE_SIZE, type ButtonId } from "./playerScene.js";
 
 const FPS = 10;
 const NEEDLE_STEP_FRAMES = 2;
@@ -63,11 +63,11 @@ export function PlayerScreen() {
       const duration = current?.durationSeconds ?? 0;
       if (frame !== state.lastFrame) {
         state.lastFrame = frame;
-        const target = playingRef.current ? NEEDLE_ANGLES.length - 1 : 0;
+        const target = playingRef.current ? NEEDLE_STEPS - 1 : 0;
         if (frame % NEEDLE_STEP_FRAMES === 0 && state.needleStep !== target) {
           state.needleStep += Math.sign(target - state.needleStep);
         }
-        if (playingRef.current && state.needleStep === NEEDLE_ANGLES.length - 1) {
+        if (playingRef.current && state.needleStep === NEEDLE_STEPS - 1) {
           state.spin += 1;
           state.positionTicks += 1;
         }

@@ -1,9 +1,24 @@
-import { bayerThreshold, disc, drawMask, drawText, line, maskInkWidth, pixel, rect, ring, sprite, textMask, type Ctx } from "../pixel/draw.js";
-import { chamfer, led, panel, screenWell } from "../pixel/ui.js";
-import { SPRITE_COLORS, PALETTE } from "../pixel/palette.js";
+import {
+  bayerThreshold,
+  disc,
+  drawMask,
+  drawText,
+  ellipse,
+  ellipseRing,
+  line,
+  maskInkWidth,
+  pixel,
+  rect,
+  sprite,
+  textMask,
+  type Ctx,
+} from "../pixel/draw.js";
+import { PALETTE, SPRITE_COLORS } from "../pixel/palette.js";
 import type { PixelGrid } from "../pixel/PixelCanvas.js";
+import { SCENE_SIZE } from "../pixel/scale.js";
+import { led, screenWell } from "../pixel/ui.js";
 
-export const SCENE_SIZE = 156;
+export { SCENE_SIZE };
 
 export type ButtonId = "previous" | "back" | "toggle" | "forward" | "next";
 
@@ -17,10 +32,10 @@ interface ButtonBox {
 
 export const BUTTONS: readonly ButtonBox[] = (["previous", "back", "toggle", "forward", "next"] as const).map((id, index) => ({
   id,
-  x: 6 + index * 26,
-  y: 128,
-  w: 22,
-  h: 20,
+  x: 4 + index * 23,
+  y: 102,
+  w: 20,
+  h: 16,
 }));
 
 export function buttonAt(x: number, y: number): ButtonId | null {
@@ -28,8 +43,10 @@ export function buttonAt(x: number, y: number): ButtonId | null {
   return hit?.id ?? null;
 }
 
-// 0 = repouso, último = sobre o disco
-export const NEEDLE_ANGLES = [0, 12, 24, 36];
+// Posições do braço: 0 = repouso, último = agulha sobre o disco.
+const ARM_ANGLES = [0, 21, 42, 63];
+const ARM_LENGTHS = [33, 35, 37, 40];
+export const NEEDLE_STEPS = ARM_ANGLES.length;
 
 export interface PlayerView {
   title: string;
@@ -44,16 +61,14 @@ export interface PlayerView {
   frame: number;
 }
 
-const CHASSIS = { x: 3, y: 16, w: 150, h: 94 };
-const DISC_CENTER = { x: 49, y: 63 };
-const ARM_PIVOT = { x: 100, y: 24 };
-const ARM_LENGTH = 40;
-const MARQUEE = { left: 6, right: 150, textY: 3 };
-const EQ_WELL = { x: 106, y: 62, w: 42, h: 42 };
-const EQ = { left: 110, bars: 7, baseline: 102 };
-const SPIN_STEP_TURNS = 20 / 360; // 20° por quadro a 10 fps ≈ 33 rpm
+const MARQUEE = { left: 4, right: 116, textY: 3 };
+const PLATTER = { x: 36, y: 41, rx: 31, ry: 18 };
+const PIVOT = { x: 88, y: 24 };
+const EQ_WELL = { x: 44, y: 67, w: 49, h: 11 };
+const EQ_BARS = 12;
+const SPIN_STEP_TURNS = 20 / 360;
 
-function triangle(base: "left" | "right", height = 11): string[] {
+function triangle(base: "left" | "right", height: number): string[] {
   const widest = Math.ceil(height / 2);
   return Array.from({ length: height }, (_, row) => {
     const width = widest - Math.abs(row - Math.floor(height / 2));
@@ -62,21 +77,18 @@ function triangle(base: "left" | "right", height = 11): string[] {
   });
 }
 
-function join(...parts: string[][]): PixelGrid {
-  return parts[0].map((_, row) => parts.map((part) => part[row]).join(""));
-}
-
-const bar = (width: number, height = 11) => Array.from({ length: height }, () => "K".repeat(width));
-const gap = (width: number, height = 11) => Array.from({ length: height }, () => ".".repeat(width));
+const join = (...parts: string[][]): PixelGrid => parts[0].map((_, row) => parts.map((part) => part[row]).join(""));
+const bar = (width: number, height: number) => Array.from({ length: height }, () => "K".repeat(width));
+const gap = (width: number, height: number) => Array.from({ length: height }, () => ".".repeat(width));
 
 const ICONS: Record<ButtonId | "play" | "pause", PixelGrid> = {
-  previous: join(bar(2), gap(1), triangle("right")),
-  next: join(triangle("left"), gap(1), bar(2)),
+  previous: join(bar(2, 9), gap(1, 9), triangle("right", 9)),
+  next: join(triangle("left", 9), gap(1, 9), bar(2, 9)),
   back: join(triangle("right", 9), triangle("right", 9)),
   forward: join(triangle("left", 9), triangle("left", 9)),
-  toggle: triangle("left"),
-  play: triangle("left"),
-  pause: join(bar(3), gap(3), bar(3)),
+  toggle: triangle("left", 9),
+  play: triangle("left", 9),
+  pause: join(bar(3, 9), gap(2, 9), bar(3, 9)),
 };
 
 function formatTime(seconds: number, unknown = false): string {
@@ -100,141 +112,283 @@ function drawMarquee(ctx: Ctx, view: PlayerView): void {
   rect(ctx, MARQUEE.left, 12, windowWidth, 2, PALETTE.accent);
 }
 
+const circularDistance = (a: number, b: number) => Math.min(Math.abs(a - b) % 1, 1 - (Math.abs(a - b) % 1));
+
+// Estrelas da janela, piscando fora de fase.
+const STARS = [
+  { x: 107, y: 22, period: 14, on: 9 },
+  { x: 113, y: 27, period: 11, on: 6 },
+  { x: 108, y: 34, period: 17, on: 12 },
+  { x: 114, y: 40, period: 9, on: 5 },
+  { x: 109, y: 43, period: 13, on: 8 },
+];
+
+function drawWindow(ctx: Ctx, frame: number): void {
+  rect(ctx, 104, 17, 14, 30, PALETTE.ink);
+  rect(ctx, 106, 19, 10, 26, PALETTE.ink);
+  rect(ctx, 105, 18, 12, 1, PALETTE.mid);
+  rect(ctx, 105, 18, 1, 28, PALETTE.mid);
+  rect(ctx, 105, 45, 12, 1, PALETTE.surface);
+  rect(ctx, 116, 19, 1, 26, PALETTE.surface);
+  // lua
+  rect(ctx, 111, 21, 3, 1, PALETTE.bg);
+  rect(ctx, 110, 22, 2, 3, PALETTE.bg);
+  rect(ctx, 111, 25, 3, 1, PALETTE.bg);
+  pixel(ctx, 113, 22, PALETTE.surface);
+  // travessas
+  rect(ctx, 105, 32, 12, 1, PALETTE.mid);
+  rect(ctx, 110, 26, 1, 19, PALETTE.mid);
+  for (const star of STARS) {
+    if ((frame + star.x) % star.period < star.on) pixel(ctx, star.x, star.y, PALETTE.bg);
+  }
+  // estrela cadente a cada ~9 s
+  const run = frame % 90;
+  if (run < 6) {
+    pixel(ctx, 115 - Math.floor(run * 1.5), 21 + run, PALETTE.bg);
+    pixel(ctx, 116 - Math.floor(run * 1.5), 20 + run, PALETTE.surface);
+  }
+}
+
 function drawSpray(ctx: Ctx): void {
-  const cx = 130;
-  const cy = 38;
-  const radius = 13;
+  const cx = 110;
+  const cy = 57;
+  const radius = 7;
   for (let dy = -radius; dy <= radius; dy += 1) {
     for (let dx = -radius; dx <= radius; dx += 1) {
       const distance = Math.hypot(dx, dy);
       if (distance >= radius) continue;
-      if (bayerThreshold(cx + dx, cy + dy) < (1 - distance / radius) ** 1.4) pixel(ctx, cx + dx, cy + dy, PALETTE.accent);
+      if (bayerThreshold(cx + dx, cy + dy) < (1 - distance / radius) ** 1.3) pixel(ctx, cx + dx, cy + dy, PALETTE.accent);
     }
   }
 }
 
-function circularDistance(a: number, b: number): number {
-  const diff = Math.abs(a - b) % 1;
-  return Math.min(diff, 1 - diff);
+function drawTable(ctx: Ctx): void {
+  rect(ctx, 0, 80, SCENE_SIZE, 10, PALETTE.surface);
+  rect(ctx, 0, 80, SCENE_SIZE, 1, PALETTE.ink);
+  rect(ctx, 0, 89, SCENE_SIZE, 1, PALETTE.ink);
+  for (let x = 6; x < SCENE_SIZE; x += 17) rect(ctx, x, 86, 7, 1, PALETTE.mid);
+  for (let x = 14; x < SCENE_SIZE; x += 23) rect(ctx, x, 83, 5, 1, PALETTE.bg);
 }
 
-function drawTurntable(ctx: Ctx, view: PlayerView): void {
-  const { x: cx, y: cy } = DISC_CENTER;
+function drawBody(ctx: Ctx, view: PlayerView): void {
+  // sombra na mesa
+  for (let x = 6; x < 99; x += 1) {
+    for (let y = 81; y < 84; y += 1) if (bayerThreshold(x, y) < 0.55) pixel(ctx, x, y, PALETTE.mid);
+  }
+  rect(ctx, 8, 79, 7, 2, PALETTE.ink);
+  rect(ctx, 88, 79, 7, 2, PALETTE.ink);
+
+  // tampo
+  rect(ctx, 3, 16, 98, 51, PALETTE.ink);
+  rect(ctx, 4, 17, 96, 49, PALETTE.bg);
+  rect(ctx, 4, 17, 96, 1, PALETTE.surface);
+  rect(ctx, 4, 64, 96, 2, PALETTE.surface);
+  // frente
+  rect(ctx, 3, 66, 98, 14, PALETTE.ink);
+  rect(ctx, 4, 67, 96, 12, PALETTE.surface);
+  rect(ctx, 4, 67, 96, 1, PALETTE.bg);
+  rect(ctx, 4, 78, 96, 1, PALETTE.mid);
+
+  const NOTCH: [number, number][] = [[0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1]];
+  [12, 21, 30].forEach((kx, index) => {
+    disc(ctx, kx, 73, 3, PALETTE.ink);
+    disc(ctx, kx, 73, 2, PALETTE.bg);
+    const [dx, dy] = NOTCH[(view.playing ? Math.floor(view.frame / 6) + index * 3 : index * 3) % 8];
+    pixel(ctx, kx + dx, 73 + dy, PALETTE.ink);
+  });
+  led(ctx, 97, 73, view.playing && view.frame % 10 < 6);
+
+  for (const [sx, sy] of [
+    [6, 19],
+    [97, 19],
+    [6, 62],
+    [97, 62],
+  ]) {
+    pixel(ctx, sx, sy, PALETTE.mid);
+    pixel(ctx, sx + 1, sy + 1, PALETTE.ink);
+  }
+}
+
+function drawPlatter(ctx: Ctx, view: PlayerView): void {
+  const { x: cx, y: cy, rx, ry } = PLATTER;
   const progress = view.durationSeconds > 0 ? Math.min(1, view.positionSeconds / view.durationSeconds) : 0;
   const phase = (view.spin * SPIN_STEP_TURNS) % 1;
 
-  disc(ctx, cx, cy, 41, PALETTE.ink);
-  disc(ctx, cx, cy, 40, PALETTE.bg);
+  // prato rebaixado
+  ellipse(ctx, cx, cy + 1, rx + 1, ry + 1, PALETTE.ink);
+  ellipse(ctx, cx, cy, rx + 1, ry + 1, PALETTE.ink);
+  ellipse(ctx, cx, cy, rx, ry, PALETTE.surface);
+  ellipse(ctx, cx, cy + 1, rx - 1, ry - 1, PALETTE.bg);
 
-  ring(ctx, cx, cy, 34, 37, PALETTE.mid);
-  if (progress > 0) ring(ctx, cx, cy, 34, 37, PALETTE.accent, (turn) => turn <= progress);
+  // progresso: trilho mid, avanço magenta, a partir do topo
+  ellipseRing(ctx, cx, cy, rx, ry, 0.86, 0.97, PALETTE.mid);
+  if (progress > 0) ellipseRing(ctx, cx, cy, rx, ry, 0.86, 0.97, PALETTE.accent, (turn) => turn <= progress);
 
-  disc(ctx, cx, cy, 33, PALETTE.ink);
+  // vinil, com a borda lateral aparecendo embaixo
+  ellipse(ctx, cx, cy + 2, 25, 14, PALETTE.mid);
+  ellipse(ctx, cx, cy, 25, 14, PALETTE.ink);
 
   const inWedge = (turn: number) => circularDistance(turn, phase) < 0.07 || circularDistance(turn, phase + 0.5) < 0.07;
-  ring(ctx, cx, cy, 12, 32, PALETTE.mid, inWedge);
-  for (const radius of [18, 23, 27, 31]) {
-    ring(ctx, cx, cy, radius - 1, radius, PALETTE.surface, inWedge);
-    ring(ctx, cx, cy, radius - 1, radius, PALETTE.mid, (turn) => !inWedge(turn));
+  ellipseRing(ctx, cx, cy, 25, 14, 0.3, 0.94, PALETTE.mid, inWedge);
+  for (const radius of [0.46, 0.6, 0.74, 0.88]) {
+    ellipseRing(ctx, cx, cy, 25, 14, radius - 0.06, radius, PALETTE.surface, inWedge);
+    ellipseRing(ctx, cx, cy, 25, 14, radius - 0.06, radius, PALETTE.mid, (turn) => !inWedge(turn));
   }
 
-  disc(ctx, cx, cy, 10, PALETTE.ink);
-  disc(ctx, cx, cy, 9, PALETTE.surface);
-  ring(ctx, cx, cy, 6, 7, PALETTE.mid);
+  // dois reflexos correndo pela borda
+  for (const offset of [0, 0.5]) {
+    const glint = (phase * 2 + offset) * Math.PI * 2;
+    pixel(ctx, cx + Math.round(Math.sin(glint) * 23.5), cy - Math.round(Math.cos(glint) * 13), PALETTE.bg);
+  }
+
+  // selo
+  ellipse(ctx, cx, cy, 8, 4, PALETTE.ink);
+  ellipse(ctx, cx, cy, 7, 3, PALETTE.surface);
   const angle = phase * Math.PI * 2;
-  rect(ctx, cx + Math.round(Math.sin(angle) * 4) - 1, cy - Math.round(Math.cos(angle) * 4) - 1, 2, 2, PALETTE.ink);
-  disc(ctx, cx, cy, 1, PALETTE.ink);
+  rect(ctx, cx + Math.round(Math.sin(angle) * 4) - 1, cy - Math.round(Math.cos(angle) * 2), 2, 1, PALETTE.ink);
+  pixel(ctx, cx, cy, PALETTE.ink);
 }
 
-function drawChassis(ctx: Ctx, view: PlayerView): void {
-  panel(ctx, CHASSIS.x, CHASSIS.y, CHASSIS.w, CHASSIS.h);
-  chamfer(ctx, CHASSIS.x, CHASSIS.y, CHASSIS.w, CHASSIS.h, PALETTE.bg);
-  for (const [sx, sy] of [
-    [CHASSIS.x + 4, CHASSIS.y + 4],
-    [CHASSIS.x + CHASSIS.w - 6, CHASSIS.y + 4],
-    [CHASSIS.x + 4, CHASSIS.y + CHASSIS.h - 6],
-    [CHASSIS.x + CHASSIS.w - 6, CHASSIS.y + CHASSIS.h - 6],
-  ]) {
-    rect(ctx, sx, sy, 2, 2, PALETTE.mid);
-    pixel(ctx, sx, sy, PALETTE.ink);
-  }
-  led(ctx, 114, 24, view.playing && view.frame % 10 < 6);
+function armTip(step: number): { x: number; y: number } {
+  const radians = (ARM_ANGLES[step] * Math.PI) / 180;
+  return {
+    x: Math.round(PIVOT.x - Math.sin(radians) * ARM_LENGTHS[step]),
+    y: Math.round(PIVOT.y + Math.cos(radians) * ARM_LENGTHS[step] * 0.82),
+  };
+}
 
-  for (let row = 0; row < 3; row += 1) {
-    for (let x = EQ_WELL.x + 2 + (row % 2); x < EQ_WELL.x + EQ_WELL.w - 2; x += 3) {
-      pixel(ctx, x, 53 + row * 3, PALETTE.mid);
+const insidePlatter = (x: number, y: number) => ((x - PLATTER.x) / PLATTER.rx) ** 2 + ((y - PLATTER.y) / PLATTER.ry) ** 2 <= 1;
+
+function drawTonearm(ctx: Ctx, view: PlayerView): void {
+  const onRecord = view.playing && view.needleStep === NEEDLE_STEPS - 1;
+  const wobble = onRecord && Math.floor(view.frame / 3) % 2 === 0 ? 1 : 0;
+  const tip = armTip(view.needleStep);
+  const tipY = tip.y + wobble;
+
+  // apoio do braço
+  rect(ctx, 86, 54, 5, 2, PALETTE.ink);
+  rect(ctx, 87, 56, 3, 5, PALETTE.ink);
+  rect(ctx, 88, 56, 1, 5, PALETTE.mid);
+
+  // sombra do braço, só sobre o prato
+  const steps = 40;
+  for (let i = 0; i <= steps; i += 1) {
+    const x = Math.round(PIVOT.x + ((tip.x - PIVOT.x) * i) / steps) + 2;
+    const y = Math.round(PIVOT.y + ((tipY - PIVOT.y) * i) / steps) + 3;
+    if (insidePlatter(x, y)) pixel(ctx, x, y, PALETTE.mid);
+  }
+
+  line(ctx, PIVOT.x, PIVOT.y, tip.x, tipY, PALETTE.ink, 3);
+  line(ctx, PIVOT.x, PIVOT.y, tip.x, tipY, PALETTE.surface, 1);
+  rect(ctx, tip.x - 2, tipY - 1, 5, 4, PALETTE.ink);
+  rect(ctx, tip.x - 1, tipY, 3, 2, PALETTE.mid);
+
+  // base com contrapeso
+  rect(ctx, PIVOT.x + 3, PIVOT.y - 4, 5, 6, PALETTE.ink);
+  rect(ctx, PIVOT.x + 4, PIVOT.y - 3, 3, 4, PALETTE.mid);
+  ellipse(ctx, PIVOT.x, PIVOT.y + 2, 6, 3, PALETTE.ink);
+  ellipse(ctx, PIVOT.x, PIVOT.y, 6, 3, PALETTE.ink);
+  ellipse(ctx, PIVOT.x, PIVOT.y, 5, 2, PALETTE.surface);
+  pixel(ctx, PIVOT.x, PIVOT.y, PALETTE.ink);
+
+  // chiado da agulha
+  if (onRecord) {
+    for (let k = 0; k < 2; k += 1) {
+      const hash = Math.imul((view.frame + 1) * 2654435761 + k * 40503, 1597334677) >>> 0;
+      if ((hash >>> 9) % 3 === 0) pixel(ctx, tip.x - 3 + ((hash >>> 3) % 7), tipY - 2 - ((hash >>> 12) % 3), PALETTE.bg);
     }
   }
 }
 
-function drawTonearm(ctx: Ctx, view: PlayerView): void {
-  const theta = (NEEDLE_ANGLES[view.needleStep] * Math.PI) / 180;
-  const onRecord = view.playing && view.needleStep === NEEDLE_ANGLES.length - 1;
-  const wobble = onRecord && view.frame % 6 < 3 ? 1 : 0;
-  const tipX = Math.round(ARM_PIVOT.x - Math.sin(theta) * ARM_LENGTH);
-  const tipY = Math.round(ARM_PIVOT.y + Math.cos(theta) * ARM_LENGTH) + wobble;
-
-  line(ctx, ARM_PIVOT.x, ARM_PIVOT.y, tipX, tipY, PALETTE.ink, 3);
-  line(ctx, ARM_PIVOT.x, ARM_PIVOT.y, tipX, tipY, PALETTE.surface, 1);
-
-  rect(ctx, tipX - 2, tipY - 1, 5, 5, PALETTE.ink);
-  rect(ctx, tipX - 1, tipY, 3, 2, PALETTE.mid);
-
-  disc(ctx, ARM_PIVOT.x, ARM_PIVOT.y, 6, PALETTE.ink);
-  disc(ctx, ARM_PIVOT.x, ARM_PIVOT.y, 5, PALETTE.surface);
-  disc(ctx, ARM_PIVOT.x, ARM_PIVOT.y, 2, PALETTE.ink);
-}
-
-function barHeightSegments(index: number, tick: number): number {
+function eqHeight(index: number, tick: number): number {
   const hash = Math.imul((index + 1) * 2654435761, (tick + 3) * 40503) >>> 0;
   return 1 + ((hash >>> 7) % 8);
 }
 
+// Visor do painel frontal: barras com ponta magenta e ponto de pico que cai.
 function drawEqualizer(ctx: Ctx, view: PlayerView): void {
   screenWell(ctx, EQ_WELL.x, EQ_WELL.y, EQ_WELL.w, EQ_WELL.h);
   const tick = view.frame >> 1;
-  for (let index = 0; index < EQ.bars; index += 1) {
-    const segments = view.playing ? barHeightSegments(index, tick) : 1;
-    const x = EQ.left + index * 5;
-    for (let segment = 0; segment < segments; segment += 1) {
-      const top = segment === segments - 1;
-      rect(ctx, x, EQ.baseline - 3 - segment * 4, 4, 3, top ? PALETTE.accent : PALETTE.bg);
+  const baseline = EQ_WELL.y + EQ_WELL.h - 2;
+  for (let index = 0; index < EQ_BARS; index += 1) {
+    const x = EQ_WELL.x + 2 + index * 4;
+    if (!view.playing) {
+      rect(ctx, x, baseline, 3, 1, PALETTE.mid);
+      continue;
     }
+    const height = eqHeight(index, tick);
+    rect(ctx, x, baseline - height + 1, 3, height, PALETTE.bg);
+    rect(ctx, x, baseline - height + 1, 3, 1, PALETTE.accent);
+    let peak = height;
+    for (let back = 1; back <= 5; back += 1) peak = Math.max(peak, eqHeight(index, tick - back) - back);
+    if (peak > height) pixel(ctx, x + 1, baseline - peak, PALETTE.surface);
   }
 }
 
-const NOTE: PixelGrid = ["..KK.", "..K.K", "..K..", "..K..", "KKK..", "KKK.."];
+const NOTE: PixelGrid = ["..KK", "..K.", "..K.", "KK..", "KK.."];
 
 function drawNotes(ctx: Ctx, view: PlayerView): void {
   if (!view.playing) return;
-  for (let index = 0; index < 3; index += 1) {
-    const travel = (view.frame + index * 12) % 36;
-    const x = 112 + index * 13 + (Math.floor(travel / 6) % 2);
-    const y = 60 - travel;
-    sprite(ctx, NOTE, { K: index % 2 === 0 ? PALETTE.ink : PALETTE.mid }, x, y);
+  for (let index = 0; index < 2; index += 1) {
+    const travel = (view.frame + index * 14) % 28;
+    sprite(ctx, NOTE, { K: index === 0 ? PALETTE.ink : PALETTE.mid }, 68 + index * 9 + (Math.floor(travel / 5) % 2), 62 - travel);
   }
 }
 
-const LEAVES = [
-  "...KK...KK..",
-  "..KSSK.KSSK.",
-  ".KSSSMKSSSMK",
-  ".KSSMK.KSMK.",
-  "..KKK.K.KK..",
-  ".....KK.....",
-  ".....K......",
-  ".....K......",
+// Gato sentado na mesa: silhueta em ink com realces em mid.
+const CAT_HEAD: PixelGrid = [
+  "..K.......K..",
+  "..KK.....KK..",
+  "..KMK...KMK..",
+  "..KKKKKKKKK..",
+  ".KMKKKKKKKKK.",
+  ".KKKKKKKKKKK.",
+  "MKKKKKMKKKKKM",
+  ".KKKKKKKKKKK.",
+  "..KKKKKKKKK..",
 ];
+const CAT_BODY: PixelGrid = [".KKKKKKKKKKK.", "KKKKKMKKKKKKK", "KKKKKKKKKKKKK", "KKKMKKKKKMKKK", "KKKKKKKKKKKKK"];
+const CAT_TAIL: PixelGrid[] = [
+  ["....", "....", "....", "..K.", ".KK.", "KK.."],
+  ["....", "....", "..KK", "..K.", ".KK.", "KK.."],
+  ["...K", "..KK", "..K.", ".KK.", ".K..", "KK.."],
+  ["....", "..KK", "..K.", ".KK.", ".K..", "KK.."],
+];
+const CAT = { x: 103, y: 71 };
 
-function drawPlant(ctx: Ctx, frame: number): void {
-  const sway = (frame >> 2) % 2;
-  LEAVES.forEach((row, index) => {
-    const shift = index < 5 ? sway : 0;
-    sprite(ctx, [row], SPRITE_COLORS, 138 + shift, 134 + index);
-  });
-  rect(ctx, 139, 142, 10, 8, PALETTE.ink);
-  rect(ctx, 140, 143, 8, 6, PALETTE.mid);
-  rect(ctx, 140, 143, 8, 1, PALETTE.surface);
+// Toca: acorda, pisca e balança a cabeça no ritmo. Parado: dorme e respira, com zZz.
+function drawCat(ctx: Ctx, view: PlayerView): void {
+  const { x, y } = CAT;
+  const { frame, playing } = view;
+  const colors = { K: PALETTE.ink, M: PALETTE.mid };
+
+  const beat = playing && Math.floor(frame / 3) % 2 === 0 ? 1 : 0;
+  const breath = !playing && Math.floor(frame / 12) % 2 === 0 ? 1 : 0;
+  const headY = y + beat + breath;
+
+  sprite(ctx, CAT_TAIL[Math.floor(frame / (playing ? 2 : 8)) % CAT_TAIL.length], colors, x + 13, y + 9);
+  sprite(ctx, CAT_BODY, colors, x, y + 9);
+  sprite(ctx, CAT_HEAD, colors, x, headY);
+
+  const awake = playing && frame % 47 >= 2;
+  if (awake) {
+    pixel(ctx, x + 4, headY + 5, PALETTE.bg);
+    pixel(ctx, x + 8, headY + 5, PALETTE.bg);
+  } else if (!playing) {
+    // olhos fechados
+    rect(ctx, x + 3, headY + 5, 2, 1, PALETTE.mid);
+    rect(ctx, x + 8, headY + 5, 2, 1, PALETTE.mid);
+  }
+  // a orelha mexe de vez em quando
+  if (frame % 61 < 2) pixel(ctx, x + 10, headY, PALETTE.ink);
+
+  if (!playing) {
+    for (let index = 0; index < 2; index += 1) {
+      const t = (Math.floor(frame / 2) + index * 8) % 16;
+      if (t > 13) continue;
+      sprite(ctx, ["KKK", ".K.", "KKK"], { K: PALETTE.mid }, x + 11 + (t % 4 < 2 ? 0 : 1), y - 2 - Math.floor(t / 2));
+    }
+  }
 }
 
 function drawButton(ctx: Ctx, box: ButtonBox, icon: PixelGrid, pressed: boolean, enabled: boolean): void {
@@ -260,18 +414,20 @@ export function drawPlayer(ctx: Ctx, view: PlayerView): void {
   rect(ctx, 0, 0, SCENE_SIZE, SCENE_SIZE, PALETTE.bg);
 
   drawMarquee(ctx, view);
-  drawChassis(ctx, view);
+  drawWindow(ctx, view.frame);
   drawSpray(ctx);
-  drawTurntable(ctx, view);
+  drawTable(ctx);
+  drawCat(ctx, view);
+  drawBody(ctx, view);
+  drawPlatter(ctx, view);
   drawEqualizer(ctx, view);
   drawNotes(ctx, view);
   drawTonearm(ctx, view);
-  drawPlant(ctx, view.frame);
 
-  drawText(ctx, formatTime(view.positionSeconds), 6, 114, PALETTE.ink);
+  drawText(ctx, formatTime(view.positionSeconds), 4, 92, PALETTE.ink);
   const total = formatTime(view.durationSeconds, view.durationSeconds <= 0);
   const totalMask = textMask(total);
-  drawMask(ctx, totalMask, 150 - maskInkWidth(totalMask), 114, PALETTE.ink);
+  drawMask(ctx, totalMask, 116 - maskInkWidth(totalMask), 92, PALETTE.ink);
 
   for (const box of BUTTONS) {
     const icon = box.id === "toggle" && view.playing ? ICONS.pause : ICONS[box.id];
@@ -279,11 +435,11 @@ export function drawPlayer(ctx: Ctx, view: PlayerView): void {
   }
 }
 
-// fração (0 a 1) a partir do topo, sentido horário
+// Clique no anel de progresso: fração (0 a 1) a partir do topo, sentido horário.
 export function ringFraction(x: number, y: number): number | null {
-  const dx = x - DISC_CENTER.x;
-  const dy = y - DISC_CENTER.y;
-  const distance = Math.hypot(dx, dy);
-  if (distance < 33 || distance > 38.5) return null;
-  return (Math.atan2(dx, -dy) / (Math.PI * 2) + 1) % 1;
+  const u = (x - PLATTER.x) / PLATTER.rx;
+  const v = (y - PLATTER.y) / PLATTER.ry;
+  const n = Math.hypot(u, v);
+  if (n < 0.8 || n > 1.04) return null;
+  return (Math.atan2(u, -v) / (Math.PI * 2) + 1) % 1;
 }
