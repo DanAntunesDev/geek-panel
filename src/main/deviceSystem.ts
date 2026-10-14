@@ -3,7 +3,7 @@ import { BrowserWindow, ipcMain } from "electron";
 import { IPC_CHANNELS } from "../shared/ipcChannels.js";
 import { themePalette } from "../shared/theme.js";
 import { DEVICE_PALETTE, FRAME_SIZE } from "../shared/deviceProtocol.js";
-import type { AgendaState, AppConfig, DeviceLinkStatus, DeviceState, PlaybackState } from "../shared/types.js";
+import type { AgendaState, AppConfig, DeviceLinkStatus, DeviceState, DisplayMode, PlaybackState } from "../shared/types.js";
 import { DeviceLink } from "./deviceLink.js";
 import { DisplayScheduler } from "./displayScheduler.js";
 import { attachRenderer, PRELOAD_PATH } from "./window.js";
@@ -42,6 +42,7 @@ export function createDeviceSystem(deps: Deps) {
     inputs: () => {
       const current = config;
       const rotation = current?.rotation;
+      const on = (screen: DisplayMode) => rotation?.enabled?.[screen] ?? true;
       return {
         mode: rotation?.mode ?? "automatic",
         seconds: {
@@ -51,10 +52,10 @@ export function createDeviceSystem(deps: Deps) {
           agenda: rotation?.agendaSeconds ?? 20,
         },
         available: {
-          player: deps.playback().media !== null,
-          usage: Object.values(current?.usage.providers ?? {}).some((provider) => provider.enabled),
-          clock: true,
-          agenda: Boolean(current?.agenda.enabled) && deps.agenda().connected,
+          player: deps.playback().media !== null && on("player"),
+          usage: Object.values(current?.usage.providers ?? {}).some((provider) => provider.enabled) && on("usage"),
+          clock: on("clock"),
+          agenda: Boolean(current?.agenda.enabled) && deps.agenda().connected && on("agenda"),
         },
       };
     },

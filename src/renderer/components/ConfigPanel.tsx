@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { AppConfig, ClockStyle, ManualMode } from "../../shared/types.js";
+import type { AppConfig, ClockStyle, DisplayMode, ManualMode } from "../../shared/types.js";
 import { AgendaModule } from "./config/AgendaModule.js";
 import { DeviceModule } from "./config/DeviceModule.js";
 import { MediaModule } from "./config/MediaModule.js";
@@ -24,11 +24,11 @@ const CLOCK_STYLES: { value: ClockStyle; label: string }[] = [
 
 type RotationKey = "playerSeconds" | "usageSeconds" | "clockSeconds" | "agendaSeconds";
 
-const ROTATION_FIELDS: { key: RotationKey; label: string }[] = [
-  { key: "playerSeconds", label: "Player (s)" },
-  { key: "usageSeconds", label: "Tokens (s)" },
-  { key: "clockSeconds", label: "Relógio (s)" },
-  { key: "agendaSeconds", label: "Agenda (s)" },
+const ROTATION_FIELDS: { key: RotationKey; screen: DisplayMode; label: string }[] = [
+  { key: "playerSeconds", screen: "player", label: "Player" },
+  { key: "usageSeconds", screen: "usage", label: "Tokens" },
+  { key: "clockSeconds", screen: "clock", label: "Relógio" },
+  { key: "agendaSeconds", screen: "agenda", label: "Agenda" },
 ];
 
 export function ConfigPanel() {
@@ -113,17 +113,25 @@ export function ConfigPanel() {
             options={ROTATION_MODES}
             onChange={(mode) => update({ ...config, rotation: { ...config.rotation, mode } })}
           />
-          <h3 className="cfg-sub">TEMPO EM CADA TELA</h3>
+          <p className="cfg-note">Tela desmarcada não entra no rodízio automático. Os tempos valem só para o modo AUTO.</p>
+          <h3 className="cfg-sub">TELAS NO RODÍZIO E TEMPO EM CADA UMA</h3>
           <div className="cfg-row">
             {ROTATION_FIELDS.map((field) => (
-              <Field key={field.key} label={field.label}>
+              <div key={field.key} className="cfg-field">
+                <Check
+                  checked={config.rotation.enabled[field.screen]}
+                  onChange={(value) => update({ ...config, rotation: { ...config.rotation, enabled: { ...config.rotation.enabled, [field.screen]: value } } })}
+                >
+                  {field.label}
+                </Check>
                 <NumberField
                   value={config.rotation[field.key]}
                   min={1}
-                  max={3600}
+                  max={600}
                   onChange={(value) => update({ ...config, rotation: { ...config.rotation, [field.key]: value } })}
                 />
-              </Field>
+                <span>segundos</span>
+              </div>
             ))}
           </div>
         </Module>

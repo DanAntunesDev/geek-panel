@@ -93,6 +93,8 @@ export interface AppConfig {
     usageSeconds: number;
     clockSeconds: number;
     agendaSeconds: number;
+    // Telas que entram no rodízio automático.
+    enabled: Record<DisplayMode, boolean>;
   };
   clock: {
     timezone: string;

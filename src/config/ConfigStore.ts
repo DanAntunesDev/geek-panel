@@ -27,6 +27,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     usageSeconds: 10,
     clockSeconds: 30,
     agendaSeconds: 20,
+    enabled: { player: true, usage: true, clock: true, agenda: true },
   },
   clock: {
     timezone: "America/Sao_Paulo",
@@ -97,7 +98,11 @@ export function validateConfig(input: unknown): AppConfig {
   const merged: AppConfig = {
     device: { ...DEFAULT_CONFIG.device, ...candidate.device },
     server: { ...DEFAULT_CONFIG.server, ...candidate.server },
-    rotation: { ...DEFAULT_CONFIG.rotation, ...migrateRotation(candidate.rotation) },
+    rotation: {
+      ...DEFAULT_CONFIG.rotation,
+      ...migrateRotation(candidate.rotation),
+      enabled: { ...DEFAULT_CONFIG.rotation.enabled, ...candidate.rotation?.enabled },
+    },
     theme: { ...DEFAULT_CONFIG.theme, ...candidate.theme },
     app: { ...DEFAULT_CONFIG.app, ...candidate.app },
     agenda: { ...DEFAULT_CONFIG.agenda, ...candidate.agenda },
@@ -143,6 +148,13 @@ export function validateConfig(input: unknown): AppConfig {
     if (!Number.isInteger(seconds) || seconds < 1 || seconds > 600) {
       throw new ConfigValidationError("duração de rotação fora do intervalo permitido");
     }
+  }
+  const enabledScreens = Object.values(merged.rotation.enabled);
+  if (enabledScreens.some((value) => typeof value !== "boolean")) {
+    throw new ConfigValidationError("opção de tela ativa inválida");
+  }
+  if (!enabledScreens.some(Boolean)) {
+    throw new ConfigValidationError("deixe pelo menos uma tela ativa no rodízio");
   }
   if (typeof merged.device.autoConnect !== "boolean") {
     throw new ConfigValidationError("opção de conexão automática inválida");
