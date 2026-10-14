@@ -1,6 +1,6 @@
 // Tipos compartilhados entre processo principal, renderer e servidor local.
 
-export type DisplayMode = "player" | "usage" | "clock" | "network";
+export type DisplayMode = "player" | "usage" | "clock" | "agenda";
 
 export type ManualMode = DisplayMode | "automatic";
 
@@ -35,6 +35,8 @@ export interface UsageCard {
   resetAt: string | null;
   status: UsageStatus;
   updatedAt: string;
+  // Motivo quando não há dado (ex.: sem chave de administração).
+  note: string | null;
 }
 
 export type StreamingServiceId = "spotify" | "youtubeMusic" | "youtube";
@@ -83,7 +85,7 @@ export interface AppConfig {
     playerSeconds: number;
     usageSeconds: number;
     clockSeconds: number;
-    networkSeconds: number;
+    agendaSeconds: number;
   };
   clock: {
     timezone: string;
@@ -91,6 +93,12 @@ export interface AppConfig {
     style: ClockStyle;
     showSeconds: boolean;
     hour12: boolean;
+  };
+  agenda: {
+    enabled: boolean;
+    // Minutos antes do início em que o lembrete dispara (ex.: 10 e 5).
+    reminders: number[];
+    notify: boolean;
   };
   media: {
     pollIntervalMs: number;
@@ -108,42 +116,40 @@ export interface AppConfig {
     path: string;
     providers: Record<string, { enabled: boolean }>;
     customProviders: ProviderSpec[];
+    // Limite mensal de tokens por provedor, definido por você (0 = sem limite).
+    limits: Record<string, number>;
   };
 }
 
-// Espelha um subconjunto de ~/internet-monitor/state.json, escrito por um
-// daemon externo (Internet Watch) já instalado e rodando via systemd --user
-// nesta máquina. O geek-panel só lê esse arquivo — não reimplementa o
-// monitoramento nem gerencia o serviço.
-export type NetworkStatus = "ONLINE" | "DEGRADED" | "OFFLINE" | "UNKNOWN";
+export type DeviceCheck =
+  | { ok: true; model: string; version: string; freeBytes: number | null }
+  | { ok: false; reason: "timeout" | "unreachable" | "not-geekmagic" };
 
-export interface NetworkOnuState {
-  enabled: boolean;
-  rxDbm: number | null;
-  txDbm: number | null;
-  temperatureC: number | null;
-  uptime: string | null;
+export interface AgendaEvent {
+  id: string;
+  title: string;
+  start: string;
+  end: string;
+  allDay: boolean;
+  location: string | null;
+  link: string | null;
 }
 
-export interface NetworkState {
-  available: true;
-  status: NetworkStatus;
-  reason: string;
-  gatewayLatencyMs: number | null;
-  externalAvgLatencyMs: number | null;
-  externalLossPct: number | null;
-  onu: NetworkOnuState | null;
-  updatedAt: string;
+export interface AgendaState {
+  connected: boolean;
+  account: string | null;
+  events: AgendaEvent[];
+  updatedAt: string | null;
+  error: string | null;
 }
 
-export type NetworkStateOrUnavailable = NetworkState | { available: false };
-
-export type ConnectionTestResult =
-  | { outcome: "success"; latencyMs: number }
-  | { outcome: "timeout" }
-  | { outcome: "refused" }
-  | { outcome: "dns-error" }
-  | { outcome: "invalid-response" };
+export interface AgendaReminder {
+  eventId: string;
+  title: string;
+  start: string;
+  // 0 = começa agora.
+  minutes: number;
+}
 
 // Resultado da validação de uma chave de provedor (nunca carrega a chave).
 export type KeyCheck =
@@ -158,7 +164,7 @@ export interface SecretStatus {
   hint: string | null;
 }
 
-export type AuthService = "spotify" | "google";
+export type AuthService = "spotify" | "google" | "calendar";
 
 export interface AuthStatus {
   connected: boolean;

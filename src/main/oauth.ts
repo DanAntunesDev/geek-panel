@@ -40,6 +40,17 @@ export const OAUTH_PROVIDERS: Record<AuthService, OAuthProvider> = {
     extraAuthParams: { access_type: "offline", prompt: "consent" },
     accountName: (profile) => stringField((profile as { items?: { snippet?: { title?: unknown } }[] })?.items?.[0]?.snippet?.title),
   },
+  // Mesmo app do Google, outro login: a conta da agenda pode ser diferente da do YouTube.
+  calendar: {
+    authorizeUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+    tokenUrl: "https://oauth2.googleapis.com/token",
+    profileUrl: "https://www.googleapis.com/calendar/v3/calendars/primary",
+    scopes: ["https://www.googleapis.com/auth/calendar.readonly"],
+    usesClientSecret: true,
+    callbackPort: 0,
+    extraAuthParams: { access_type: "offline", prompt: "consent select_account" },
+    accountName: (profile) => stringField((profile as { id?: unknown })?.id),
+  },
 };
 
 function stringField(value: unknown): string | null {

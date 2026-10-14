@@ -8,7 +8,10 @@ import type {
   AuthStatus,
   KeyCheck,
   MediaUrlResult,
-  NetworkStateOrUnavailable,
+  AgendaReminder,
+  AgendaState,
+  DeviceCheck,
+  UsageCard,
   SecretStatus,
   PlaybackState,
   PlayerCommand,
@@ -19,12 +22,26 @@ const api = {
   saveConfig: (config: AppConfig): Promise<AppConfig> => ipcRenderer.invoke(IPC_CHANNELS.saveConfig, config),
   getServerStatus: (): Promise<{ address: string; port: number }> =>
     ipcRenderer.invoke(IPC_CHANNELS.getServerStatus),
-  getNetworkState: (): Promise<NetworkStateOrUnavailable> => ipcRenderer.invoke(IPC_CHANNELS.getNetworkState),
-  onNetworkStateUpdate: (callback: (state: NetworkStateOrUnavailable) => void): (() => void) => {
-    const listener = (_event: unknown, state: NetworkStateOrUnavailable) => callback(state);
-    ipcRenderer.on(IPC_CHANNELS.networkStateUpdated, listener);
-    return () => ipcRenderer.removeListener(IPC_CHANNELS.networkStateUpdated, listener);
+  getAgenda: (): Promise<AgendaState> => ipcRenderer.invoke(IPC_CHANNELS.getAgenda),
+  refreshAgenda: (): Promise<AgendaState> => ipcRenderer.invoke(IPC_CHANNELS.refreshAgenda),
+  onAgendaUpdate: (callback: (state: AgendaState) => void): (() => void) => {
+    const listener = (_event: unknown, state: AgendaState) => callback(state);
+    ipcRenderer.on(IPC_CHANNELS.agendaUpdated, listener);
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.agendaUpdated, listener);
   },
+  onAgendaReminder: (callback: (reminder: AgendaReminder) => void): (() => void) => {
+    const listener = (_event: unknown, reminder: AgendaReminder) => callback(reminder);
+    ipcRenderer.on(IPC_CHANNELS.agendaReminder, listener);
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.agendaReminder, listener);
+  },
+  getUsage: (): Promise<UsageCard[]> => ipcRenderer.invoke(IPC_CHANNELS.getUsage),
+  refreshUsage: (): Promise<UsageCard[]> => ipcRenderer.invoke(IPC_CHANNELS.refreshUsage),
+  onUsageUpdate: (callback: (cards: UsageCard[]) => void): (() => void) => {
+    const listener = (_event: unknown, cards: UsageCard[]) => callback(cards);
+    ipcRenderer.on(IPC_CHANNELS.usageUpdated, listener);
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.usageUpdated, listener);
+  },
+  testDevice: (): Promise<DeviceCheck> => ipcRenderer.invoke(IPC_CHANNELS.testDevice),
   getPlayback: (): Promise<PlaybackState> => ipcRenderer.invoke(IPC_CHANNELS.getPlayback),
   onPlaybackUpdate: (callback: (state: PlaybackState) => void): (() => void) => {
     const listener = (_event: unknown, state: PlaybackState) => callback(state);

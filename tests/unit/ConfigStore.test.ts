@@ -79,6 +79,22 @@ describe("validateConfig", () => {
     expect(() => validateConfig(withProvider({ authStyle: "header", headerName: "x y" }))).toThrow("cabeçalho");
   });
 
+  it("migra config antiga com a tela de rede", () => {
+    const old = { rotation: { mode: "network", networkSeconds: 20, playerSeconds: 15 } };
+    const result = validateConfig(old);
+    expect(result.rotation.mode).toBe("automatic");
+    expect(result.rotation.playerSeconds).toBe(15);
+    expect("networkSeconds" in result.rotation).toBe(false);
+  });
+
+  it("valida os lembretes da agenda e ordena do maior para o menor", () => {
+    expect(validateConfig({ agenda: { reminders: [5, 15, 10] } }).agenda.reminders).toEqual([15, 10, 5]);
+    expect(() => validateConfig({ agenda: { reminders: [0] } })).toThrow("lembretes");
+    expect(() => validateConfig({ agenda: { reminders: [5, 5] } })).toThrow("lembretes");
+    expect(() => validateConfig({ agenda: { reminders: [1, 2, 3, 4, 5] } })).toThrow("lembretes");
+    expect(() => validateConfig({ agenda: { enabled: "sim" } })).toThrow("agenda");
+  });
+
 });
 
 describe("ConfigStore", () => {

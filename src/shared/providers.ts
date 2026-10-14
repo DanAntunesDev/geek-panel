@@ -28,14 +28,19 @@ export const STREAMING_SERVICES: readonly { id: StreamingServiceId; label: strin
   { id: "youtube", label: "YouTube" },
 ];
 
+// Só estes provedores expõem consumo por API (e só com chave de administração).
+export const USAGE_PROVIDERS: readonly string[] = ["openai", "anthropic"];
+
 export function allProviders(config: Pick<AppConfig["usage"], "customProviders">): ProviderSpec[] {
   return [...BUILTIN_PROVIDERS, ...config.customProviders];
 }
 
 export const PROVIDER_ID_PATTERN = /^[a-z0-9-]{3,32}$/;
 
-// Chaves aceitas no cofre: segredo do Google ou "provider:<id>" de provedor conhecido.
+// Chaves aceitas no cofre: segredo do Google, "provider:<id>" (chave comum) e
+// "usage:<id>" (chave de administração, só para quem lê consumo).
 export function isSecretName(value: string, knownProviderIds: readonly string[]): boolean {
   if (value === "google:clientSecret") return true;
-  return value.startsWith("provider:") && knownProviderIds.includes(value.slice("provider:".length));
+  if (value.startsWith("provider:")) return knownProviderIds.includes(value.slice("provider:".length));
+  return value.startsWith("usage:") && USAGE_PROVIDERS.includes(value.slice("usage:".length));
 }

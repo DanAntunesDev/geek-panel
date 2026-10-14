@@ -38,6 +38,7 @@ export function buildFakeUsageCards(): UsageCard[] {
       resetAt: null,
       status: "ok",
       updatedAt: now,
+      note: null,
     },
     {
       id: "card-b",
@@ -50,6 +51,7 @@ export function buildFakeUsageCards(): UsageCard[] {
       resetAt: null,
       status: "ok",
       updatedAt: now,
+      note: null,
     },
   ];
 }

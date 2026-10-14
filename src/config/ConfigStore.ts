@@ -8,7 +8,7 @@ import type { AppConfig, ProviderSpec, StreamingServiceId } from "../shared/type
 
 export const DEFAULT_CONFIG: AppConfig = {
   device: {
-    host: "192.168.1.100",
+    host: "192.168.1.5",
     port: 80,
     requestTimeoutMs: 1500,
   },
@@ -22,7 +22,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     playerSeconds: 30,
     usageSeconds: 10,
     clockSeconds: 30,
-    networkSeconds: 20,
+    agendaSeconds: 20,
   },
   clock: {
     timezone: "America/Sao_Paulo",
@@ -30,6 +30,11 @@ export const DEFAULT_CONFIG: AppConfig = {
     style: "digital",
     showSeconds: true,
     hour12: false,
+  },
+  agenda: {
+    enabled: false,
+    reminders: [10, 5],
+    notify: true,
   },
   media: {
     pollIntervalMs: 1000,
@@ -53,12 +58,19 @@ export const DEFAULT_CONFIG: AppConfig = {
       gemini: { enabled: false },
     },
     customProviders: [],
+    limits: { openai: 0, anthropic: 0, gemini: 0 },
   },
 };
 
 // Mescla um registro de objetos chave a chave com os padrões (ignora chaves desconhecidas).
 function mergeEach<T extends object>(defaults: Record<string, T>, input: Partial<Record<string, Partial<T>>> | undefined): Record<string, T> {
   return Object.fromEntries(Object.entries(defaults).map(([key, value]) => [key, { ...value, ...input?.[key] }]));
+}
+
+// Configs antigas tinham a tela de rede: o modo vira "automatic" e o tempo some.
+function migrateRotation(rotation: Partial<AppConfig["rotation"]> | undefined): Partial<AppConfig["rotation"]> {
+  const { networkSeconds: _removed, ...rest } = (rotation ?? {}) as Partial<AppConfig["rotation"]> & { networkSeconds?: number };
+  return (rest.mode as string) === "network" ? { ...rest, mode: "automatic" } : rest;
 }
 
 const CLIENT_ID_PATTERN = /^[A-Za-z0-9._-]{0,128}$/;
@@ -77,7 +89,8 @@ export function validateConfig(input: unknown): AppConfig {
   const merged: AppConfig = {
     device: { ...DEFAULT_CONFIG.device, ...candidate.device },
     server: { ...DEFAULT_CONFIG.server, ...candidate.server },
-    rotation: { ...DEFAULT_CONFIG.rotation, ...candidate.rotation },
+    rotation: { ...DEFAULT_CONFIG.rotation, ...migrateRotation(candidate.rotation) },
+    agenda: { ...DEFAULT_CONFIG.agenda, ...candidate.agenda },
     clock: { ...DEFAULT_CONFIG.clock, ...candidate.clock },
     media: {
       ...DEFAULT_CONFIG.media,
@@ -88,6 +101,7 @@ export function validateConfig(input: unknown): AppConfig {
       ...DEFAULT_CONFIG.usage,
       ...candidate.usage,
       customProviders: candidate.usage?.customProviders ?? [],
+      limits: {},
       providers: {},
     },
   };
@@ -96,6 +110,7 @@ export function validateConfig(input: unknown): AppConfig {
   merged.usage.providers = Object.fromEntries(
     providerIds.map((id) => [id, { enabled: candidate.usage?.providers?.[id]?.enabled === true }]),
   );
+  merged.usage.limits = Object.fromEntries(providerIds.map((id) => [id, validLimit(candidate.usage?.limits?.[id])]));
 
   if (!HOST_PATTERN.test(merged.device.host)) {
     throw new ConfigValidationError("host inválido");
@@ -113,12 +128,14 @@ export function validateConfig(input: unknown): AppConfig {
     merged.rotation.playerSeconds,
     merged.rotation.usageSeconds,
     merged.rotation.clockSeconds,
-    merged.rotation.networkSeconds,
+    merged.rotation.agendaSeconds,
   ]) {
     if (!Number.isInteger(seconds) || seconds < 1 || seconds > 600) {
       throw new ConfigValidationError("duração de rotação fora do intervalo permitido");
     }
   }
+  validateAgenda(merged.agenda);
+  merged.agenda.reminders = [...merged.agenda.reminders].sort((a, b) => b - a);
   validateMedia(merged.media);
   if (!["digital", "analog", "flip"].includes(merged.clock.style)) {
     throw new ConfigValidationError("estilo de relógio inválido");
@@ -131,7 +148,7 @@ export function validateConfig(input: unknown): AppConfig {
   } catch {
     throw new ConfigValidationError("fuso horário inválido");
   }
-  if (!["player", "usage", "clock", "network", "automatic"].includes(merged.rotation.mode)) {
+  if (!["player", "usage", "clock", "agenda", "automatic"].includes(merged.rotation.mode)) {
     throw new ConfigValidationError("modo de rotação inválido");
   }
 
@@ -231,4 +248,25 @@ function validateCustomProviders(list: ProviderSpec[]): void {
       throw new ConfigValidationError("nome do cabeçalho inválido");
     }
   }
+}
+
+function validateAgenda(agenda: AppConfig["agenda"]): void {
+  if (typeof agenda.enabled !== "boolean" || typeof agenda.notify !== "boolean") {
+    throw new ConfigValidationError("opções da agenda inválidas");
+  }
+  const { reminders } = agenda;
+  const valid =
+    Array.isArray(reminders) &&
+    reminders.length <= 4 &&
+    new Set(reminders).size === reminders.length &&
+    reminders.every((minutes) => Number.isInteger(minutes) && minutes >= 1 && minutes <= 120);
+  if (!valid) throw new ConfigValidationError("lembretes da agenda inválidos");
+}
+
+function validLimit(value: unknown): number {
+  if (value === undefined || value === null) return 0;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 1e12) {
+    throw new ConfigValidationError("limite mensal inválido");
+  }
+  return value;
 }

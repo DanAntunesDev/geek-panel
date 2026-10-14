@@ -9,7 +9,7 @@ const ROTATION_MODES: { value: ManualMode; label: string }[] = [
   { value: "player", label: "PLAYER" },
   { value: "usage", label: "TOKENS" },
   { value: "clock", label: "RELÓGIO" },
-  { value: "network", label: "REDE" },
+  { value: "agenda", label: "AGENDA" },
 ];
 
 const CLOCK_STYLES: { value: ClockStyle; label: string }[] = [
@@ -18,13 +18,13 @@ const CLOCK_STYLES: { value: ClockStyle; label: string }[] = [
   { value: "flip", label: "FLIP" },
 ];
 
-type RotationKey = "playerSeconds" | "usageSeconds" | "clockSeconds" | "networkSeconds";
+type RotationKey = "playerSeconds" | "usageSeconds" | "clockSeconds" | "agendaSeconds";
 
 const ROTATION_FIELDS: { key: RotationKey; label: string }[] = [
   { key: "playerSeconds", label: "Player (s)" },
   { key: "usageSeconds", label: "Tokens (s)" },
   { key: "clockSeconds", label: "Relógio (s)" },
-  { key: "networkSeconds", label: "Rede (s)" },
+  { key: "agendaSeconds", label: "Agenda (s)" },
 ];
 
 export function ConfigPanel() {

@@ -1,17 +1,19 @@
-import { ipcMain, type BrowserWindow, type IpcMainInvokeEvent } from "electron";
+import { ipcMain, Notification, type BrowserWindow, type IpcMainInvokeEvent } from "electron";
 import { ConfigStore, ConfigValidationError } from "../config/ConfigStore.js";
 import { IPC_CHANNELS } from "../shared/ipcChannels.js";
 import { allProviders, isSecretName } from "../shared/providers.js";
 import type { AuthService, PlaybackState, PlayerCommand } from "../shared/types.js";
+import { AgendaService } from "./agendaSource.js";
+import { probeDevice } from "./deviceProbe.js";
 import type { RunningServer } from "./httpServer.js";
 import { resolveMediaUrl } from "./mediaUrl.js";
-import { readNetworkState, watchNetworkState } from "./networkState.js";
 import type { OAuthManager } from "./oauth.js";
 import { createPlayback } from "./playbackSetup.js";
 import { validateProviderKey } from "./providerValidation.js";
+import { UsageService } from "./usageSource.js";
 import { SecretStore, SecretStoreUnavailableError } from "./secretStore.js";
 
-const AUTH_SERVICES: readonly string[] = ["spotify", "google"];
+const AUTH_SERVICES: readonly string[] = ["spotify", "google", "calendar"];
 const NO_PLAYBACK: PlaybackState = { available: false, source: null, player: null, media: null, warning: null };
 
 export interface IpcDependencies {
@@ -56,7 +58,10 @@ export function registerIpcHandlers(window: BrowserWindow, configStore: ConfigSt
     IPC_CHANNELS.saveConfig,
     trusted(async (input: unknown) => {
       try {
-        return await configStore.save(input);
+        const saved = await configStore.save(input);
+        void agenda.refresh();
+        void usage.refresh();
+        return saved;
       } catch (error) {
         if (error instanceof ConfigValidationError) throw new Error(`configuração inválida: ${error.message}`);
         throw error;
@@ -66,11 +71,49 @@ export function registerIpcHandlers(window: BrowserWindow, configStore: ConfigSt
 
   ipcMain.handle(IPC_CHANNELS.getServerStatus, trusted(() => ({ address: server.address, port: server.port })));
 
-  ipcMain.handle(IPC_CHANNELS.getNetworkState, trusted(() => readNetworkState()));
-  const stopNetworkWatch = watchNetworkState((state) => {
-    if (!window.isDestroyed()) window.webContents.send(IPC_CHANNELS.networkStateUpdated, state);
+  // Agenda: lê o Google Agenda e dispara os lembretes (aviso do sistema + tela do app).
+  const send = (channel: string, payload: unknown) => {
+    if (!window.isDestroyed()) window.webContents.send(channel, payload);
+  };
+  const agenda = new AgendaService({
+    oauth: deps.oauth,
+    clientId: async () => (await configStore.load()).media.googleClientId,
+    config: () => configStore.load(),
+    onState: (state) => send(IPC_CHANNELS.agendaUpdated, state),
+    onReminder: (reminder) => {
+      send(IPC_CHANNELS.agendaReminder, reminder);
+      void configStore.load().then((config) => {
+        if (!config.agenda.notify || !Notification.isSupported()) return;
+        const time = new Date(reminder.start).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+        new Notification({
+          title: reminder.minutes === 0 ? "Começa agora" : `Começa em ${reminder.minutes} min`,
+          body: `${reminder.title} · ${time}`,
+        }).show();
+      });
+    },
   });
-  window.on("closed", stopNetworkWatch);
+  agenda.start();
+  window.on("closed", () => agenda.stop());
+  ipcMain.handle(IPC_CHANNELS.getAgenda, trusted(() => agenda.state()));
+  ipcMain.handle(IPC_CHANNELS.refreshAgenda, trusted(() => agenda.refresh()));
+
+  const usage = new UsageService({
+    secrets: deps.secrets,
+    config: () => configStore.load(),
+    onState: (cards) => send(IPC_CHANNELS.usageUpdated, cards),
+  });
+  usage.start();
+  window.on("closed", () => usage.stop());
+  ipcMain.handle(IPC_CHANNELS.getUsage, trusted(() => usage.state()));
+  ipcMain.handle(IPC_CHANNELS.refreshUsage, trusted(() => usage.refresh()));
+
+  ipcMain.handle(
+    IPC_CHANNELS.testDevice,
+    trusted(async () => {
+      const { device } = await configStore.load();
+      return probeDevice(device.host, device.port);
+    }),
+  );
 
   ipcMain.on(IPC_CHANNELS.windowMinimize, (event) => {
     assertTrustedSender(event as IpcMainInvokeEvent, window);
@@ -141,6 +184,7 @@ export function registerIpcHandlers(window: BrowserWindow, configStore: ConfigSt
       const key = await secretName(name);
       try {
         await deps.secrets.set(key, assertString(value, 4096).trim());
+        if (key.startsWith("usage:")) void usage.refresh();
       } catch (error) {
         if (error instanceof SecretStoreUnavailableError) throw new Error(error.message);
         throw new Error("não foi possível guardar o segredo");
@@ -151,7 +195,9 @@ export function registerIpcHandlers(window: BrowserWindow, configStore: ConfigSt
   ipcMain.handle(
     IPC_CHANNELS.secretClear,
     trusted(async (name: unknown) => {
-      await deps.secrets.delete(await secretName(name));
+      const key = await secretName(name);
+      await deps.secrets.delete(key);
+      if (key.startsWith("usage:")) void usage.refresh();
     }),
   );
 
@@ -174,14 +220,22 @@ export function registerIpcHandlers(window: BrowserWindow, configStore: ConfigSt
   }
 
   ipcMain.handle(IPC_CHANNELS.authStatus, trusted((service: unknown) => deps.oauth.status(authService(service))));
-  ipcMain.handle(IPC_CHANNELS.authLogout, trusted((service: unknown) => deps.oauth.logout(authService(service))));
+  ipcMain.handle(
+    IPC_CHANNELS.authLogout,
+    trusted(async (service: unknown) => {
+      await deps.oauth.logout(authService(service));
+      void agenda.refresh();
+    }),
+  );
   ipcMain.handle(
     IPC_CHANNELS.authLogin,
     trusted(async (service: unknown) => {
       const name = authService(service);
       const { media } = await configStore.load();
       try {
-        return await deps.oauth.login(name, name === "spotify" ? media.spotifyClientId : media.googleClientId);
+        const status = await deps.oauth.login(name, name === "spotify" ? media.spotifyClientId : media.googleClientId);
+        void agenda.refresh();
+        return status;
       } catch (error) {
         throw new Error(publicMessage(error));
       }

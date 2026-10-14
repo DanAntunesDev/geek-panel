@@ -4,7 +4,6 @@ import { ScreenTabs, type TabKey } from "./components/ScreenTabs.js";
 import { TitleBar } from "./components/TitleBar.js";
 import { DeviceFrame } from "./pixel/DeviceFrame.js";
 import { ClockScreen } from "./screens/ClockScreen.js";
-import { NetworkScreen } from "./screens/NetworkScreen.js";
 import { PlayerScreen } from "./screens/PlayerScreen.js";
 import { UsageScreen } from "./screens/UsageScreen.js";
 
@@ -23,7 +22,6 @@ export function App() {
             {tab === "player" ? <PlayerScreen /> : null}
             {tab === "usage" ? <UsageScreen /> : null}
             {tab === "clock" ? <ClockScreen /> : null}
-            {tab === "network" ? <NetworkScreen /> : null}
           </DeviceFrame>
         )}
       </div>
