@@ -3,14 +3,12 @@ import type { MediaState, PlayerCommand } from "../../shared/types.js";
 import { PixelScene } from "../pixel/PixelScene.js";
 import { buttonAt, drawPlayer, NEEDLE_STEPS, ringFraction, SCENE_SIZE, volumeAt, type ButtonId } from "./playerScene.js";
 import { anchorPosition } from "./positionClock.js";
-import { seedOf, SKIP_OUT_FRAMES, swapAt, swapDone, trackKey } from "./vinylSwap.js";
+import { seedOf, SETTLE_FRAMES, swapAt, swapDone, trackKey } from "./vinylSwap.js";
 
 const FPS = 10;
 const NEEDLE_STEP_FRAMES = 2;
 const SEEK_STEP_SECONDS = 10;
 const NOTICE_MS = 4000;
-// Evita trocar de disco várias vezes seguidas quando o título pisca ao carregar.
-const MIN_FRAMES_BETWEEN_SWAPS = 25;
 
 const COMMANDS: Record<ButtonId, PlayerCommand> = {
   previous: { type: "previous" },
@@ -35,7 +33,6 @@ export function PlayerScreen() {
     ready: false,
     key: null as string | null,
     pending: false,
-    skipOut: false,
     start: -1,
     lastStart: -1000,
     shown: { title: "", artist: "" },
@@ -60,12 +57,10 @@ export function PlayerScreen() {
       }) * FPS;
     lastReported.current = next ? reported : null;
 
-    // a primeira leitura só ajusta; depois, faixa nova pede troca de vinil
-    if (state.ready && key && key !== state.key) {
-      state.pending = true;
-      state.skipOut = state.key === null;
-    }
-    state.key = key;
+    // a primeira leitura só ajusta; depois, faixa nova pede troca de vinil.
+    // Título vazio (player carregando) não conta: só vale a próxima faixa de verdade.
+    if (state.ready && key && key !== state.key) state.pending = true;
+    if (key) state.key = key;
     state.ready = true;
   }, []);
 
@@ -108,10 +103,13 @@ export function PlayerScreen() {
       const current = mediaRef.current;
       const duration = current?.durationSeconds ?? 0;
       const change = swap.current;
-      if (change.pending && frame - change.lastStart > MIN_FRAMES_BETWEEN_SWAPS) {
+      if (change.pending) {
         change.pending = false;
-        change.lastStart = frame;
-        change.start = frame - (change.skipOut ? SKIP_OUT_FRAMES : 0);
+        // título que pisca logo depois de uma troca não gera outro disco
+        if (frame - change.lastStart > SETTLE_FRAMES) {
+          change.lastStart = frame;
+          change.start = frame;
+        }
       }
       if (change.start >= 0 && swapDone(frame - change.start)) change.start = -1;
       const timeline = change.start >= 0 ? swapAt(frame - change.start) : null;

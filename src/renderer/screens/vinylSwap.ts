@@ -1,9 +1,12 @@
 // Troca de vinil: levanta a agulha, o disco velho sai, o novo entra e a agulha desce.
-export const SWAP_FRAMES = 32;
-const LIFT = 8;
-const OUT = 16;
-const IN = 24;
-const SLIDE_STEP = 8;
+export const SWAP_FRAMES = 20;
+const LIFT = 4;
+const OUT = 10;
+const IN = 16;
+const SLIDE_STEP = 11;
+
+// Depois que uma troca começa, mudanças de título nesse prazo só atualizam o disco que está entrando.
+export const SETTLE_FRAMES = 50;
 
 export interface SwapFrame {
   armUp: boolean;
@@ -21,9 +24,6 @@ export function swapAt(frame: number): SwapFrame {
 }
 
 export const swapDone = (frame: number) => frame >= SWAP_FRAMES;
-
-// Quando um disco já não estava no prato, a troca começa direto na entrada do novo.
-export const SKIP_OUT_FRAMES = OUT;
 
 export function trackKey(title: string, artist: string): string | null {
   return title ? `${title}|${artist}` : null;
