@@ -28,7 +28,7 @@ const page = await app.firstWindow();
 await page.waitForLoadState("load");
 await page.waitForTimeout(800);
 
-for (const label of ["Player", "Tokens", "Relógio", "Rede", "Config"]) {
+for (const label of ["Player", "Tokens", "Relógio", "Agenda", "Config"]) {
   await page.getByRole("button", { name: label }).click();
   await page.waitForTimeout(400);
   await page.screenshot({ path: path.join(outDir, `${label.toLowerCase()}-dpr${dpr}${clockStyle ? `-${clockStyle}` : ""}.png`) });
