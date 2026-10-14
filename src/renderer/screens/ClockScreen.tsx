@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AppConfig } from "../../shared/types.js";
 import { PixelScene } from "../pixel/PixelScene.js";
-import { CLOCK_SCENE_SIZE, clockParts, drawClock, newFlipState } from "./clockScene.js";
+import { SCENE_SIZE } from "../pixel/scale.js";
+import { clockParts, drawClock, newFlipState } from "./clockScene.js";
 
 const FPS = 10;
 
@@ -13,7 +14,7 @@ const FALLBACK_CLOCK_CONFIG: AppConfig["clock"] = {
   hour12: false,
 };
 
-export function ClockScreen({ connected }: { connected: boolean }) {
+export function ClockScreen() {
   const [clockConfig, setClockConfig] = useState<AppConfig["clock"]>(FALLBACK_CLOCK_CONFIG);
   const flip = useRef(newFlipState());
 
@@ -29,13 +30,13 @@ export function ClockScreen({ connected }: { connected: boolean }) {
         showSeconds: clockConfig.showSeconds,
         showDate: clockConfig.showDate,
         hour12: clockConfig.hour12,
-        connected,
+        timezone: clockConfig.timezone,
         frame,
         flip: flip.current,
       });
     },
-    [clockConfig, connected],
+    [clockConfig],
   );
 
-  return <PixelScene width={CLOCK_SCENE_SIZE} height={CLOCK_SCENE_SIZE} fps={FPS} draw={draw} label="Relógio" />;
+  return <PixelScene width={SCENE_SIZE} height={SCENE_SIZE} fps={FPS} draw={draw} label="Relógio" />;
 }

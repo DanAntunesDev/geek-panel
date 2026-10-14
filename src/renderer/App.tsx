@@ -22,7 +22,7 @@ export function App() {
           <DeviceFrame>
             {tab === "player" ? <PlayerScreen /> : null}
             {tab === "usage" ? <UsageScreen /> : null}
-            {tab === "clock" ? <ClockScreen connected={false} /> : null}
+            {tab === "clock" ? <ClockScreen /> : null}
             {tab === "network" ? <NetworkScreen /> : null}
           </DeviceFrame>
         )}
