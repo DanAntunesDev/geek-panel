@@ -4,7 +4,6 @@
   "version": "0.1.0",
   "description": "Painel local para display remoto compacto",
   "main": "dist-electron/main/app.js",
-  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -p tsconfig.json --noEmit && vite build && electron-builder --dir",
@@ -19,6 +18,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "electron": "^33.2.1",
     "electron-builder": "^25.1.8",
+    "playwright-core": "^1.64.0",
     "supertest": "^7.0.0",
     "typescript": "^5.7.2",
     "vite": "^6.0.6",
@@ -27,6 +27,7 @@
     "vitest": "^2.1.8"
   },
   "dependencies": {
+    "dbus-next": "^0.10.2",
     "express": "^4.21.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
