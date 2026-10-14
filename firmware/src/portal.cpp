@@ -88,7 +88,7 @@ static void handleRoot() {
   body += checkbox("bl", settings.flags & FLAG_BACKLIGHT_LOW, "luz acende com sinal baixo");
   body += F("<button>Salvar</button></form><form method='post' action='/test'><button>Mostrar padrão de teste</button></form>");
 #endif
-  body += F("<h2>Aparelho</h2><form method='post' action='/reboot'><button>Reiniciar</button></form><p><a href='/update'>Atualizar firmware</a></p>");
+  body += F("<h2>Aparelho</h2><form method='post' action='/reboot'><button>Reiniciar</button></form><form method='post' action='/reset' onsubmit=\"return confirm('Apagar o Wi-Fi e o código deste aparelho?')\"><button>Apagar tudo e recomeçar</button></form><p><a href='/update'>Atualizar firmware</a></p>");
   server.send(200, "text/html; charset=utf-8", page(body));
 }
 
@@ -128,6 +128,19 @@ static void handleSettings() {
   server.send(303);
 }
 
+// O app manda o código sozinho, sem ninguém digitar na página.
+static void handlePair() {
+  if (!authorized()) return;
+  if (!server.hasArg("code")) {
+    server.send(400, "text/plain", "faltou o codigo");
+    return;
+  }
+  strlcpy(settings.code, server.arg("code").c_str(), sizeof(settings.code));
+  if (server.hasArg("server")) strlcpy(settings.serverIp, server.arg("server").c_str(), sizeof(settings.serverIp));
+  settingsSave();
+  server.send(200, "text/plain", "ok");
+}
+
 static void handleTest() {
   if (!authorized()) return;
   displayTestPattern();
@@ -136,6 +149,18 @@ static void handleTest() {
   server.send(303);
 }
 #endif
+
+// Volta ao começo: esquece o Wi-Fi, o código e os ajustes, e abre a rede GeekPanel.
+static void handleReset() {
+  if (!authorized()) return;
+  server.send(200, "text/html; charset=utf-8", page(F("<p>Tudo apagado. Reiniciando; em instantes aparece a rede GeekPanel.</p>")));
+  delay(500);
+  settingsReset();
+  settingsSave();
+  WiFi.disconnect(true);
+  ESP.eraseConfig();
+  ESP.restart();
+}
 
 static void handleReboot() {
   if (!authorized()) return;
@@ -170,7 +195,9 @@ void portalBegin() {
 #ifndef LOADER_ONLY
   server.on("/settings", HTTP_POST, handleSettings);
   server.on("/test", HTTP_POST, handleTest);
+  server.on("/pair", HTTP_POST, handlePair);
 #endif
+  server.on("/reset", HTTP_POST, handleReset);
   server.on("/reboot", HTTP_POST, handleReboot);
   server.on("/status", HTTP_GET, handleStatus);
   server.onNotFound(handleNotFound);

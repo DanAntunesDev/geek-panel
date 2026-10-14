@@ -16,3 +16,4 @@ extern Settings settings;
 
 void settingsLoad();
 void settingsSave();
+void settingsReset();
