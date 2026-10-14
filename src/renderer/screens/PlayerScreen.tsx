@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { MediaState, PlayerCommand } from "../../shared/types.js";
 import { PixelScene } from "../pixel/PixelScene.js";
 import { buttonAt, drawPlayer, NEEDLE_STEPS, ringFraction, SCENE_SIZE, type ButtonId } from "./playerScene.js";
+import { anchorPosition } from "./positionClock.js";
 import { seedOf, SKIP_OUT_FRAMES, swapAt, swapDone, trackKey } from "./vinylSwap.js";
 
 const FPS = 10;
@@ -26,6 +27,7 @@ export function PlayerScreen() {
   const anim = useRef({ lastFrame: -1, needleStep: 0, spin: 0, positionTicks: 0 });
   const mediaRef = useRef<MediaState | null>(null);
   const playingRef = useRef(false);
+  const lastReported = useRef<number | null>(null);
   const swap = useRef({
     ready: false,
     key: null as string | null,
@@ -39,11 +41,22 @@ export function PlayerScreen() {
   const applyMedia = useCallback((next: MediaState | null) => {
     mediaRef.current = next;
     playingRef.current = next?.status === "Playing";
-    // a posição real chega a cada leitura; entre elas o relógio local avança
-    anim.current.positionTicks = (next?.positionSeconds ?? 0) * FPS;
-
     const key = next ? trackKey(next.title, next.artist) : null;
     const state = swap.current;
+
+    // a posição real chega a cada leitura; entre elas o relógio local avança
+    const reported = next?.positionSeconds ?? 0;
+    anim.current.positionTicks =
+      anchorPosition({
+        local: anim.current.positionTicks / FPS,
+        lastReported: lastReported.current,
+        reported,
+        duration: next?.durationSeconds ?? 0,
+        playing: playingRef.current,
+        newTrack: key !== state.key,
+      }) * FPS;
+    lastReported.current = next ? reported : null;
+
     // a primeira leitura só ajusta; depois, faixa nova pede troca de vinil
     if (state.ready && key && key !== state.key) {
       state.pending = true;
