@@ -30,7 +30,18 @@ Para o Spotify e o Google é preciso criar o próprio app nos painéis deles e c
 
 ## Display
 
-Testado com um SmallTV-Ultra (firmware Ultra-V9.0.51). Esse firmware só mostra imagens e GIFs, então a ideia é gerar as telas como GIF e mandar pelo Wi-Fi. O envio ainda não está pronto: por enquanto as telas só rodam na janela do app.
+Testado só com um SmallTV-Ultra (firmware de fábrica Ultra-V9.0.51), que sozinho só mostra imagens e GIFs. A ideia é trocar o firmware por um que mostra ao vivo o que o app desenha: o computador faz as telas e o aparelho só exibe. Ao ligar, ele acha o app na rede, conecta com um código de pareamento e, enquanto isso não acontece, mostra uma tela de espera. O firmware está em [firmware/](firmware/) e **ainda não foi gravado no aparelho**.
+
+O painel só aparece no aparelho com o computador e o app ligados. Em Config dá para abrir o app junto com o sistema (fica na bandeja).
+
+## Windows
+
+O app é feito para rodar igual no Linux e no Windows. O que muda:
+
+- A conexão com o aparelho abre as portas 4601 (TCP) e 4602 (UDP). No Windows, na primeira vez, o Firewall pergunta; libere para redes privadas.
+- Segredos e logins ficam no cofre de cada sistema (libsecret no Linux, DPAPI no Windows), então não passam de um sistema para o outro: no Windows é preciso conectar de novo.
+- Ler o que está tocando nos players do computador só funciona no Linux por enquanto. Spotify e YouTube funcionam nos dois.
+- O instalador do Windows ainda não foi gerado nem testado.
 
 ## Notas
 
