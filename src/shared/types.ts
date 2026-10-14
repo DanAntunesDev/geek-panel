@@ -150,8 +150,9 @@ export interface DeviceLinkStatus {
 }
 
 export type DeviceCheck =
-  | { ok: true; model: string; version: string; freeBytes: number | null }
-  | { ok: false; reason: "timeout" | "unreachable" | "not-geekmagic" };
+  | { ok: true; model: string; version: string; freeBytes: number | null; status: number }
+  // status é o código HTTP da última resposta, quando houve resposta
+  | { ok: false; reason: "timeout" | "unreachable" | "not-geekmagic"; status?: number };
 
 export interface AgendaEvent {
   id: string;

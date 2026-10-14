@@ -23,7 +23,7 @@ describe("probeDevice", () => {
       "/v.json": { body: '{"m": "SmallTV-Ultra","v":"Ultra-V9.0.51"}' },
       "/space.json": { body: '{"total":3121152,"free":2252300}' },
     });
-    expect(await probeDevice("127.0.0.1", port)).toEqual({ ok: true, model: "SmallTV-Ultra", version: "Ultra-V9.0.51", freeBytes: 2252300 });
+    expect(await probeDevice("127.0.0.1", port)).toEqual({ ok: true, model: "SmallTV-Ultra", version: "Ultra-V9.0.51", freeBytes: 2252300, status: 200 });
   });
 
   it("funciona mesmo sem /space.json", async () => {
@@ -32,7 +32,15 @@ describe("probeDevice", () => {
   });
 
   it("rejeita quem não parece uma GeekMagic", async () => {
-    expect(await probeDevice("127.0.0.1", await start({ "/v.json": { body: "<html>oi</html>" } }))).toEqual({ ok: false, reason: "not-geekmagic" });
+    expect(await probeDevice("127.0.0.1", await start({ "/v.json": { body: "<html>oi</html>" } }))).toMatchObject({ ok: false, reason: "not-geekmagic" });
+  });
+
+  it("reconhece o firmware do painel pelo /status e devolve o código HTTP quando recusa", async () => {
+    const own = await start({ "/status": { body: '{"fw":"1.0.0","heap":30000}' } });
+    expect(await probeDevice("127.0.0.1", own)).toEqual({ ok: true, model: "GeekPanel", version: "1.0.0", freeBytes: 30000, status: 200 });
+    await new Promise((resolve) => server!.close(resolve));
+    server = undefined;
+    expect(await probeDevice("127.0.0.1", await start({}))).toEqual({ ok: false, reason: "not-geekmagic", status: 404 });
   });
 
   it("separa porta fechada de tempo esgotado", async () => {
