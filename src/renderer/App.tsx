@@ -12,13 +12,13 @@ import { UsageScreen } from "./screens/UsageScreen.js";
 export function App() {
   const [tab, setTab] = useState<TabKey>("player");
   // refaz a tela quando a cor de destaque muda
-  const accent = useTheme();
+  const themeKey = useTheme();
 
   // Quando um lembrete dispara, a agenda vem para a frente.
   useEffect(() => window.painelApi.onAgendaReminder(() => setTab("agenda")), []);
 
   return (
-    <div key={accent} style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+    <div key={themeKey} style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
       <TitleBar />
       <ScreenTabs active={tab} onChange={setTab} />
       <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column" }}>

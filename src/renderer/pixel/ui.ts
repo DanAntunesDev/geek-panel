@@ -48,14 +48,14 @@ export function textCenter(ctx: Ctx, text: string, centerX: number, y: number, c
   drawMask(ctx, mask, centerX - Math.floor(maskInkWidth(mask) / 2), y, color);
 }
 
-export function segmentedBar(ctx: Ctx, x: number, y: number, w: number, h: number, percentage: number, segments: number): void {
+export function segmentedBar(ctx: Ctx, x: number, y: number, w: number, h: number, percentage: number, segments: number, fill: string = PALETTE.bg): void {
   rect(ctx, x, y, w, h, PALETTE.ink);
   const innerW = w - 2;
   const gap = 1;
   const segW = Math.floor((innerW - gap * (segments - 1)) / segments);
   const filled = Math.round((Math.max(0, Math.min(100, percentage)) / 100) * segments);
   for (let i = 0; i < segments; i += 1) {
-    const color = i < filled ? PALETTE.bg : PALETTE.mid;
+    const color = i < filled ? fill : PALETTE.mid;
     rect(ctx, x + 1 + i * (segW + gap), y + 1, segW, h - 2, color);
   }
 }

@@ -150,6 +150,17 @@ export function ConfigPanel() {
               <input className="px-input" value={config.clock.timezone} onChange={(event) => update({ ...config, clock: { ...config.clock, timezone: event.target.value } })} />
             </Field>
           </div>
+          <div className="cfg-row">
+            <Field label="Nome da cidade na tela (vazio usa o fuso)">
+              <input
+                className="px-input"
+                value={config.clock.city}
+                maxLength={24}
+                placeholder="Ex.: Curitiba"
+                onChange={(event) => update({ ...config, clock: { ...config.clock, city: event.target.value } })}
+              />
+            </Field>
+          </div>
           <Check checked={config.clock.showDate} onChange={(value) => update({ ...config, clock: { ...config.clock, showDate: value } })}>
             Mostrar data e dia da semana
           </Check>

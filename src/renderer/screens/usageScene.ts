@@ -1,6 +1,6 @@
 import { drawText, rect, sprite, type Ctx } from "../pixel/draw.js";
 import { REFRESH_FRAMES } from "../pixel/icons.js";
-import { PALETTE, SPRITE_COLORS } from "../pixel/palette.js";
+import { PALETTE, SPRITE_COLORS, THEME } from "../pixel/palette.js";
 import type { PixelGrid } from "../pixel/PixelCanvas.js";
 import { SCENE_SIZE } from "../pixel/scale.js";
 import { panel, segmentedBar, textCenter, textRight, titleBand, truncate, wrap } from "../pixel/ui.js";
@@ -44,9 +44,9 @@ const COIN: PixelGrid = ["..KKKK..", ".KSSSSK.", "KSSMMSSK", "KSMKKMSK", "KSMKKM
 
 const STATUS_LABEL: Record<UsageCard["status"], string> = { ok: "OK", stale: "ANTIGO", unavailable: "OFF" };
 
-function drawCard(ctx: Ctx, card: UsageCard, x: number, y: number, frame: number): void {
+function drawCard(ctx: Ctx, card: UsageCard, x: number, y: number, frame: number, tint: string | null): void {
   panel(ctx, x, y, 112, 40);
-  sprite(ctx, COIN, SPRITE_COLORS, x + 5, y + 4);
+  sprite(ctx, COIN, tint ? { ...SPRITE_COLORS, S: tint } : SPRITE_COLORS, x + 5, y + 4);
   drawText(ctx, truncate(card.label.toUpperCase(), 7), x + 16, y + 4, PALETTE.ink);
 
   const label = STATUS_LABEL[card.status];
@@ -66,7 +66,7 @@ function drawCard(ctx: Ctx, card: UsageCard, x: number, y: number, frame: number
   const used = compact(card.used);
   drawText(ctx, card.limit > 0 ? `${used}/${compact(card.limit)}` : `${used} TOKENS`, x + 5, y + 15, PALETTE.ink);
   if (card.limit > 0) textRight(ctx, `${card.percentage}%`, x + 108, y + 15, PALETTE.ink);
-  segmentedBar(ctx, x + 5, y + 26, 102, 8, card.limit > 0 ? card.percentage : 0, 20);
+  segmentedBar(ctx, x + 5, y + 26, 102, 8, card.limit > 0 ? card.percentage : 0, 20, tint ?? PALETTE.bg);
 }
 
 export function drawUsage(ctx: Ctx, view: UsageView): void {
@@ -83,7 +83,7 @@ export function drawUsage(ctx: Ctx, view: UsageView): void {
   const offset = pages > 1 && inPage < SLIDE_FRAMES ? (SLIDE_FRAMES - inPage) * 28 : 0;
 
   view.cards.slice(page * CARDS_PER_PAGE, page * CARDS_PER_PAGE + CARDS_PER_PAGE).forEach((card, index) => {
-    drawCard(ctx, card, 4 + offset, BAND + 4 + index * 44, view.frame);
+    drawCard(ctx, card, 4 + offset, BAND + 4 + index * 44, view.frame, THEME.tokens[(page * CARDS_PER_PAGE + index) % 2] ?? null);
   });
   if (view.cards.length === 0) {
     panel(ctx, 4, 24, 112, 60);

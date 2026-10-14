@@ -14,7 +14,7 @@ import { setIndexPalette, toIndexed } from "./indexed.js";
 export function DeviceApp() {
   const [state, setState] = useState<DeviceState>({ active: false, screen: "clock" });
 
-  useTheme((accent) => setIndexPalette(themePalette(accent)));
+  useTheme((theme) => setIndexPalette(themePalette(theme)));
 
   useEffect(() => {
     window.painelApi.getDeviceState().then(setState);

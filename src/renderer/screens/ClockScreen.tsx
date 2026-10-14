@@ -12,6 +12,7 @@ const FALLBACK_CLOCK_CONFIG: AppConfig["clock"] = {
   style: "digital",
   showSeconds: true,
   hour12: false,
+  city: "",
 };
 
 export function ClockScreen() {
@@ -19,7 +20,10 @@ export function ClockScreen() {
   const flip = useRef(newFlipState());
 
   useEffect(() => {
-    window.painelApi.getConfig().then((config) => setClockConfig(config.clock));
+    const load = () => window.painelApi.getConfig().then((config) => setClockConfig(config.clock));
+    void load();
+    // todo salvamento da Config avisa por aqui; assim estilo e cidade mudam sem reabrir a tela
+    return window.painelApi.onThemeUpdate(() => void load());
   }, []);
 
   const draw = useCallback(
@@ -31,6 +35,7 @@ export function ClockScreen() {
         showDate: clockConfig.showDate,
         hour12: clockConfig.hour12,
         timezone: clockConfig.timezone,
+        city: clockConfig.city,
         frame,
         flip: flip.current,
       });

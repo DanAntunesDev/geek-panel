@@ -1,6 +1,6 @@
 import { digitsWidth, drawDigit, drawDigits, GLYPH_ROWS } from "../pixel/bigDigits.js";
 import { disc, drawText, line, rect, type Ctx } from "../pixel/draw.js";
-import { PALETTE } from "../pixel/palette.js";
+import { colorOr, PALETTE, THEME } from "../pixel/palette.js";
 import { SCENE_SIZE } from "../pixel/scale.js";
 import { panel, screenWell, segmentedBar, textCenter } from "../pixel/ui.js";
 import type { ClockStyle } from "../../shared/types.js";
@@ -72,6 +72,7 @@ export interface ClockView {
   showSeconds: boolean;
   showDate: boolean;
   hour12: boolean;
+  city?: string;
   frame: number;
   flip: FlipState;
 }
@@ -87,9 +88,14 @@ function dateText(view: ClockView): string {
   return `${weekday} ${day}/${month}/${year}`;
 }
 
-// "America/Sao_Paulo" vira "SAO PAULO".
-function cityLabel(timezone: string): string {
-  return (timezone.split("/").pop() ?? timezone).replace(/_/g, " ").toUpperCase().slice(0, 14);
+// "America/Sao_Paulo" vira "SAO PAULO"; um nome escolhido na Config vale mais.
+export function cityLabel(timezone: string, city?: string): string {
+  const name = city?.trim() || (timezone.split("/").pop() ?? timezone).replace(/_/g, " ");
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .slice(0, 14);
 }
 
 function drawWeekdayStrip(ctx: Ctx, view: ClockView, y: number): void {
@@ -98,7 +104,7 @@ function drawWeekdayStrip(ctx: Ctx, view: ClockView, y: number): void {
     const active = index === view.parts.weekdayIndex;
     rect(ctx, x, y, 14, 12, PALETTE.ink);
     rect(ctx, x + 1, y + 1, 12, 10, active ? PALETTE.ink : PALETTE.surface);
-    drawText(ctx, letter, x + 4, y + 2, active ? PALETTE.bg : PALETTE.mid);
+    drawText(ctx, letter, x + 4, y + 2, active ? colorOr(THEME.clock.weekday, PALETTE.bg) : PALETTE.mid);
   });
 }
 
@@ -115,22 +121,27 @@ function drawDigital(ctx: Ctx, view: ClockView): void {
   // matriz de LED: pontos apagados em mid, acesos em bg
   drawDigits(ctx, "88:88", x, y, { cell, gap: 3, color: PALETTE.mid }, spacing);
   let cursor = x;
+  const hourColor = colorOr(THEME.clock.hour, PALETTE.bg);
+  const minuteColor = colorOr(THEME.clock.minute, PALETTE.bg);
+  let position = 0;
   for (const char of text) {
     const width = digitsWidth(char, cell, 0);
-    if (char !== ":" || view.parts.millis < 500) drawDigit(ctx, char, cursor, y, { cell, gap: 1, color: PALETTE.bg });
+    const color = position < 3 ? hourColor : minuteColor;
+    if (char !== ":" || view.parts.millis < 500) drawDigit(ctx, char, cursor, y, { cell, gap: 1, color });
     cursor += width + spacing;
+    position += 1;
   }
 
   const baseY = y + GLYPH_ROWS * cell + 6;
   if (view.hour12) drawText(ctx, view.parts.hour >= 12 ? "PM" : "AM", 12, baseY, PALETTE.bg);
   if (view.showSeconds) {
     const seconds = pad(view.parts.second);
-    drawDigits(ctx, seconds, 108 - digitsWidth(seconds, 2, 2), baseY, { cell: 2, gap: 0, color: PALETTE.bg }, 2);
+    drawDigits(ctx, seconds, 108 - digitsWidth(seconds, 2, 2), baseY, { cell: 2, gap: 0, color: colorOr(THEME.clock.second, PALETTE.bg) }, 2);
   }
 
-  if (view.showDate) textCenter(ctx, dateText(view), 60, 71, PALETTE.ink);
+  if (view.showDate) textCenter(ctx, dateText(view), 60, 71, colorOr(THEME.clock.date, PALETTE.ink));
   drawWeekdayStrip(ctx, view, 84);
-  textCenter(ctx, cityLabel(view.timezone), 60, 104, PALETTE.mid);
+  textCenter(ctx, cityLabel(view.timezone, view.city), 60, 104, colorOr(THEME.clock.city, PALETTE.mid));
 }
 
 function polar(cx: number, cy: number, turn: number, length: number): [number, number] {
@@ -159,29 +170,29 @@ function drawAnalog(ctx: Ctx, view: ClockView): void {
   }
 
   screenWell(ctx, cx - 10, cy + 14, 20, 11);
-  drawText(ctx, view.parts.day, cx - 8, cy + 16, PALETTE.bg);
+  drawText(ctx, view.parts.day, cx - 8, cy + 16, colorOr(THEME.clock.date, PALETTE.bg));
 
   const { hour, minute, second } = view.parts;
   // ponteiros andam em degraus: hora e minuto a cada minuto, segundos a cada segundo
   const hourTurn = Math.floor((((hour % 12) + minute / 60) / 12) * 144) / 144;
   const minuteTurn = minute / 60;
-  for (const [turn, length] of [
-    [hourTurn, 22],
-    [minuteTurn, 34],
+  for (const [turn, length, color] of [
+    [hourTurn, 22, colorOr(THEME.clock.hour, PALETTE.ink)],
+    [minuteTurn, 34, colorOr(THEME.clock.minute, PALETTE.ink)],
   ] as const) {
     const [ex, ey] = polar(cx, cy, turn, length);
     line(ctx, cx + 1, cy + 1, ex + 1, ey + 1, PALETTE.mid, 3);
-    line(ctx, cx, cy, ex, ey, PALETTE.ink, 3);
+    line(ctx, cx, cy, ex, ey, color, 3);
   }
   if (view.showSeconds) {
     const [ex, ey] = polar(cx, cy, second / 60, 40);
     const [tx, ty] = polar(cx, cy, second / 60 + 0.5, 9);
-    line(ctx, tx, ty, ex, ey, PALETTE.mid, 1);
+    line(ctx, tx, ty, ex, ey, colorOr(THEME.clock.second, PALETTE.mid), 1);
   }
   disc(ctx, cx, cy, 3, PALETTE.ink);
   disc(ctx, cx, cy, 1, PALETTE.surface);
 
-  if (view.showDate) textCenter(ctx, `${view.parts.weekday} ${view.parts.day}/${view.parts.month}`, 60, 109, PALETTE.ink);
+  if (view.showDate) textCenter(ctx, `${view.parts.weekday} ${view.parts.day}/${view.parts.month}`, 60, 109, colorOr(THEME.clock.date, PALETTE.ink));
 }
 
 function advanceCard(card: FlipCardState, value: string, frame: number): number {
@@ -193,7 +204,7 @@ function advanceCard(card: FlipCardState, value: string, frame: number): number 
   return frame - card.start;
 }
 
-function drawFlipCard(ctx: Ctx, x: number, y: number, w: number, h: number, card: FlipCardState, frame: number, value: string): void {
+function drawFlipCard(ctx: Ctx, x: number, y: number, w: number, h: number, card: FlipCardState, frame: number, value: string, ink: string): void {
   const t = advanceCard(card, value, frame);
   const flipping = t >= 0 && t < 4;
   const half = Math.floor(h / 2);
@@ -202,7 +213,7 @@ function drawFlipCard(ctx: Ctx, x: number, y: number, w: number, h: number, card
   const spacing = 3;
   const digitsX = x + Math.floor((w - digitsWidth("00", cell, spacing)) / 2);
   const digitsY = y + Math.floor((h - GLYPH_ROWS * cell) / 2);
-  const style = (clipTop: number, clipBottom: number) => ({ cell, gap: 0, color: PALETTE.ink, shadow: PALETTE.mid, clipTop, clipBottom });
+  const style = (clipTop: number, clipBottom: number) => ({ cell, gap: 0, color: ink, shadow: PALETTE.mid, clipTop, clipBottom });
 
   panel(ctx, x, y, w, h);
   const draw = (text: string, clipTop: number, clipBottom: number) => drawDigits(ctx, text, digitsX, digitsY, style(clipTop, clipBottom), spacing);
@@ -233,8 +244,8 @@ function drawFlipCard(ctx: Ctx, x: number, y: number, w: number, h: number, card
 }
 
 function drawFlip(ctx: Ctx, view: ClockView): void {
-  drawFlipCard(ctx, 4, 6, 52, 52, view.flip.hours, view.frame, pad(displayHour(view)));
-  drawFlipCard(ctx, 64, 6, 52, 52, view.flip.minutes, view.frame, pad(view.parts.minute));
+  drawFlipCard(ctx, 4, 6, 52, 52, view.flip.hours, view.frame, pad(displayHour(view)), colorOr(THEME.clock.hour, PALETTE.ink));
+  drawFlipCard(ctx, 64, 6, 52, 52, view.flip.minutes, view.frame, pad(view.parts.minute), colorOr(THEME.clock.minute, PALETTE.ink));
 
   if (view.parts.millis < 500) {
     rect(ctx, 58, 22, 4, 4, PALETTE.ink);
@@ -242,10 +253,10 @@ function drawFlip(ctx: Ctx, view: ClockView): void {
   }
 
   if (view.hour12) drawText(ctx, view.parts.hour >= 12 ? "PM" : "AM", 6, 62, PALETTE.ink);
-  if (view.showSeconds) segmentedBar(ctx, 4, 64, 112, 8, ((view.parts.second + 1) / 60) * 100, 12);
-  if (view.showDate) textCenter(ctx, dateText(view), 60, 77, PALETTE.ink);
+  if (view.showSeconds) segmentedBar(ctx, 4, 64, 112, 8, ((view.parts.second + 1) / 60) * 100, 12, colorOr(THEME.clock.second, PALETTE.bg));
+  if (view.showDate) textCenter(ctx, dateText(view), 60, 77, colorOr(THEME.clock.date, PALETTE.ink));
   drawWeekdayStrip(ctx, view, 90);
-  textCenter(ctx, cityLabel(view.timezone), 60, 106, PALETTE.mid);
+  textCenter(ctx, cityLabel(view.timezone, view.city), 60, 106, colorOr(THEME.clock.city, PALETTE.mid));
 }
 
 export function drawClock(ctx: Ctx, view: ClockView): void {
