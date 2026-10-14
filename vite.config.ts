@@ -18,7 +18,7 @@ export default defineConfig({
           build: {
             outDir: path.join(rootDir, "dist-electron/main"),
             rollupOptions: {
-              external: ["electron", "express", "dbus-next"],
+              external: ["electron", "dbus-next"],
               output: {
                 format: "cjs",
                 entryFileNames: "app.js",
