@@ -5,11 +5,12 @@ export interface PlaybackSource {
   label: string;
   intervalMs: number;
   enabled(): Promise<boolean>;
+  warning?(): string | null;
   poll(): Promise<MediaState | null>;
   control(command: PlayerCommand): Promise<void>;
 }
 
-const EMPTY: PlaybackState = { available: false, source: null, player: null, media: null };
+const EMPTY: PlaybackState = { available: false, source: null, player: null, media: null, warning: null };
 
 export function pickActive(
   order: PlaybackSourceId[],
@@ -50,8 +51,11 @@ export class PlaybackManager {
     const preferred = this.preferred && this.preferred.until > Date.now() && this.latest.get(this.preferred.id)?.title ? this.preferred.id : null;
     this.active = preferred ?? pickActive(this.sources.map((source) => source.id), this.latest, this.active);
     const source = this.sources.find((item) => item.id === this.active);
-    if (!source) return { ...EMPTY, available: this.sources.length > 0 };
-    return { available: true, source: source.id, player: source.label, media: this.latest.get(source.id) ?? null };
+    if (!source) {
+      const warning = this.sources.map((item) => item.warning?.() ?? null).find(Boolean) ?? null;
+      return { ...EMPTY, available: this.sources.length > 0, warning };
+    }
+    return { available: true, source: source.id, player: source.label, media: this.latest.get(source.id) ?? null, warning: null };
   }
 
   async control(command: PlayerCommand): Promise<void> {

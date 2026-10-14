@@ -12,7 +12,7 @@ import { validateProviderKey } from "./providerValidation.js";
 import { SecretStore, SecretStoreUnavailableError } from "./secretStore.js";
 
 const AUTH_SERVICES: readonly string[] = ["spotify", "google"];
-const NO_PLAYBACK: PlaybackState = { available: false, source: null, player: null, media: null };
+const NO_PLAYBACK: PlaybackState = { available: false, source: null, player: null, media: null, warning: null };
 
 export interface IpcDependencies {
   secrets: SecretStore;

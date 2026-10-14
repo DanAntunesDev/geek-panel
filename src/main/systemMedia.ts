@@ -31,7 +31,7 @@ export function toMediaState(props: RawPlayerProps, now = new Date()): MediaStat
   const status = toPlaybackStatus(props.status);
   return {
     source: "desktop-player",
-    title: asString(metadata["xesam:title"]),
+    title: cleanTitle(asString(metadata["xesam:title"])),
     artist: Array.isArray(artists) ? artists.map(asString).filter(Boolean).join(", ") : asString(artists),
     album: asString(metadata["xesam:album"]),
     artworkUrl: asString(metadata["mpris:artUrl"]) || null,
@@ -46,12 +46,23 @@ export function toMediaState(props: RawPlayerProps, now = new Date()): MediaStat
   };
 }
 
+// Pausado só vale se for mídia de verdade; o Firefox lista até a aba do WhatsApp.
+const isRealMedia = (media: MediaState) => media.title !== "" && (media.durationSeconds > 0 || media.artist !== "");
+
 export function pickActivePlayer<T extends { media: MediaState }>(players: T[]): T | null {
   return (
     players.find((player) => player.media.status === "Playing") ??
-    players.find((player) => player.media.status === "Paused" && player.media.title !== "") ??
+    players.find((player) => player.media.status === "Paused" && isRealMedia(player.media)) ??
     null
   );
+}
+
+// "(3) Nome - YouTube" vira "Nome".
+export function cleanTitle(title: string): string {
+  return title
+    .replace(/^\(\d+\)\s+/, "")
+    .replace(/\s+[-–—]\s+(YouTube Music|YouTube|Mozilla Firefox|Spotify)$/i, "")
+    .trim();
 }
 
 type Variant = { value: unknown };
@@ -68,6 +79,7 @@ export class SystemMediaReader {
   private active: string | null = null;
   private lastPosition = 0;
   identity: string | null = null;
+  warning: string | null = null;
 
   async read(): Promise<MediaState | null> {
     if (process.platform !== "linux") return null;
@@ -112,6 +124,7 @@ export class SystemMediaReader {
     );
 
     const players = [];
+    let blocked = 0;
     for (const name of names) {
       try {
         const proxy = await bus.getProxyObject(name, MPRIS_PATH);
@@ -134,10 +147,13 @@ export class SystemMediaReader {
             canGoPrevious: unwrap(all.CanGoPrevious),
           }),
         });
-      } catch {
-        // player que sumiu entre a listagem e a leitura
+      } catch (error) {
+        // player que sumiu entre a listagem e a leitura, ou acesso negado pelo sistema
+        if (error instanceof Error && /AppArmor|Permission denied|not allowed/i.test(error.message)) blocked += 1;
       }
     }
+    this.warning =
+      blocked > 0 && players.length === 0 ? "o sistema bloqueou o acesso aos players (abra o app fora do VS Code)" : null;
     return players;
   }
 }
@@ -150,6 +166,7 @@ export function systemSource(reader: SystemMediaReader, isEnabled: () => Promise
     },
     intervalMs: 1000,
     enabled: isEnabled,
+    warning: () => reader.warning,
     poll: () => reader.read(),
     control: (command) => reader.control(command),
   };

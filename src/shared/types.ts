@@ -184,6 +184,8 @@ export interface PlaybackState {
   source: PlaybackSourceId | null;
   player: string | null;
   media: MediaState | null;
+  // Aviso quando há player mas o sistema não deixa ler.
+  warning: string | null;
 }
 
 export type PlayerCommand =
