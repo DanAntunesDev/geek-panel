@@ -1,62 +1,58 @@
+import { useCallback, useRef, useState } from "react";
+import { buildFakeUsageCards } from "../../services/fixtures/fakeState.js";
 import type { UsageCard } from "../../shared/types.js";
+import { PixelScene } from "../pixel/PixelScene.js";
+import { drawUsage, isRefreshHit, USAGE_SCENE_SIZE } from "./usageScene.js";
 
-export function UsageScreen({ cards }: { cards: UsageCard[] }) {
+const FPS = 10;
+const SPIN_FRAMES = 8;
+
+function timeLabel(date: Date): string {
+  return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
+export function UsageScreen() {
+  const [cards, setCards] = useState<UsageCard[]>(() => buildFakeUsageCards());
+  const [updatedAt, setUpdatedAt] = useState(() => new Date());
+  const spinUntil = useRef(-1);
+  const frameRef = useRef(0);
+
+  function refresh() {
+    spinUntil.current = frameRef.current + SPIN_FRAMES;
+    // simulado até existir a fonte real de uso
+    setCards(
+      buildFakeUsageCards().map((card) => {
+        const jitter = Math.floor(Math.random() * Math.round(card.limit * 0.05));
+        const used = Math.min(card.limit, card.used + jitter);
+        return { ...card, used, remaining: card.limit - used, percentage: Math.round((used / card.limit) * 100) };
+      }),
+    );
+    setUpdatedAt(new Date());
+  }
+
+  const draw = useCallback(
+    (ctx: CanvasRenderingContext2D, frame: number) => {
+      frameRef.current = frame;
+      drawUsage(ctx, {
+        cards,
+        spinFramesLeft: Math.max(0, spinUntil.current - frame),
+        updatedAtLabel: timeLabel(updatedAt),
+        frame,
+      });
+    },
+    [cards, updatedAt],
+  );
+
   return (
-    <section>
-      <header
-        style={{
-          background: "var(--cor-texto)",
-          color: "var(--cor-fundo)",
-          padding: "12px 16px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <strong>TOKENIZER</strong>
-        <span aria-label="atualizar">⟳</span>
-      </header>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: 16 }}>
-        {cards.map((card) => (
-          <div
-            key={card.id}
-            style={{
-              background: "var(--cor-superficie)",
-              borderRadius: 12,
-              padding: 12,
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>{card.label}</span>
-              <span
-                style={{
-                  fontSize: 11,
-                  padding: "2px 6px",
-                  borderRadius: 6,
-                  background: card.status === "ok" ? "var(--cor-texto)" : "var(--cor-acento)",
-                  color: "var(--cor-fundo)",
-                }}
-              >
-                {card.status}
-              </span>
-            </div>
-            <p style={{ margin: "4px 0", fontSize: 20, fontWeight: "bold" }}>
-              {card.used} / {card.limit}
-            </p>
-            <p style={{ margin: 0, fontSize: 12 }}>{card.period}</p>
-            <div style={{ background: "var(--cor-fundo)", borderRadius: 8, height: 6, marginTop: 8, overflow: "hidden" }}>
-              <div
-                style={{
-                  width: `${card.percentage}%`,
-                  height: "100%",
-                  background: "var(--cor-acento)",
-                }}
-              />
-            </div>
-            <p style={{ margin: "8px 0 0", fontSize: 10, opacity: 0.7 }}>updated now</p>
-          </div>
-        ))}
-      </div>
-    </section>
+    <PixelScene
+      width={USAGE_SCENE_SIZE}
+      height={USAGE_SCENE_SIZE}
+      fps={FPS}
+      draw={draw}
+      onPointerDown={(x, y) => {
+        if (isRefreshHit(x, y)) refresh();
+      }}
+      label="Tokens"
+    />
   );
 }
