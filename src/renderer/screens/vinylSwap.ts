@@ -31,18 +31,50 @@ export interface SwapState {
   start: number;
   // faixa nova esperando por uma troca
   pending: boolean;
+  // o clique já trocou o disco; a música nova ainda não chegou do player
+  waiting: boolean;
+  // quadros que o prato ficou vazio esperando a música nova
+  held: number;
+}
+
+export const newSwapState = (): SwapState => ({ start: -1, pending: false, waiting: false, held: 0 });
+
+// No máximo este tempo de prato vazio esperando o player trazer a música nova.
+export const HOLD_FRAMES = 40;
+
+// Clique em próxima/anterior: o disco troca na hora, sem esperar o player responder.
+export function requestSwap(state: SwapState): void {
+  state.pending = true;
+  state.waiting = true;
+}
+
+// A música nova chegou do player. Se o clique já pediu a troca, ela só continua; senão pede uma.
+export function trackArrived(state: SwapState): void {
+  if (state.waiting) state.waiting = false;
+  else state.pending = true;
 }
 
 // Cada faixa nova ganha uma troca completa. Se o disco velho ainda está no prato, a troca em
 // andamento já serve; se o novo já entrou, a próxima começa quando esta terminar.
 export function advanceSwap(state: SwapState, frame: number): void {
   if (state.start >= 0 && swapDone(frame - state.start)) state.start = -1;
-  if (!state.pending) return;
-  if (state.start < 0) {
-    state.pending = false;
-    state.start = frame;
-  } else if (frame - state.start < OLD_DISC_FRAMES) {
-    state.pending = false;
+  if (state.pending) {
+    if (state.start < 0) {
+      state.pending = false;
+      state.start = frame;
+      state.held = 0;
+    } else if (frame - state.start < OLD_DISC_FRAMES) {
+      state.pending = false;
+    }
+  }
+  // disco velho já saiu e a música nova ainda não veio: prato vazio, agulha no alto
+  if (state.waiting && state.start >= 0 && frame - state.start >= OLD_DISC_FRAMES - 1) {
+    if (state.held < HOLD_FRAMES) {
+      state.held += 1;
+      state.start = frame - (OLD_DISC_FRAMES - 1);
+    } else {
+      state.waiting = false;
+    }
   }
 }
 
