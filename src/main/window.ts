@@ -11,25 +11,10 @@ const CONTENT_SECURITY_POLICY = [
   "connect-src 'self'",
 ].join("; ");
 
-export function createMainWindow(): BrowserWindow {
-  const window = new BrowserWindow({
-    width: 540,
-    height: 650,
-    minWidth: 540,
-    minHeight: 440,
-    title: "Painel local",
-    icon: path.join(__dirname, "../../assets/pixel/icon-512.png"),
-    frame: false,
-    backgroundColor: "#F7F6F3",
-    webPreferences: {
-      preload: path.join(__dirname, "../preload/preload.cjs"),
-      nodeIntegration: false,
-      contextIsolation: true,
-      sandbox: true,
-      webSecurity: true,
-    },
-  });
+export const PRELOAD_PATH = path.join(__dirname, "../preload/preload.cjs");
 
+// CSP, bloqueio de navegação e carga da interface (com #hash opcional para escolher a tela).
+export function attachRenderer(window: BrowserWindow, hash = ""): void {
   const devServerUrl = process.env.VITE_DEV_SERVER_URL;
 
   // o CSP não vale no servidor de dev do Vite (HMR)
@@ -57,10 +42,33 @@ export function createMainWindow(): BrowserWindow {
   });
 
   if (devServerUrl) {
-    window.loadURL(devServerUrl);
+    window.loadURL(hash ? `${devServerUrl}#${hash}` : devServerUrl);
   } else {
-    window.loadFile(path.join(__dirname, "../../dist/renderer/index.html"));
+    window.loadFile(path.join(__dirname, "../../dist/renderer/index.html"), hash ? { hash } : undefined);
   }
+}
+
+export function createMainWindow(show = true): BrowserWindow {
+  const window = new BrowserWindow({
+    show,
+    width: 540,
+    height: 650,
+    minWidth: 540,
+    minHeight: 440,
+    title: "Painel local",
+    icon: path.join(__dirname, "../../assets/pixel/icon-512.png"),
+    frame: false,
+    backgroundColor: "#F7F6F3",
+    webPreferences: {
+      preload: PRELOAD_PATH,
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+      webSecurity: true,
+    },
+  });
+
+  attachRenderer(window);
 
   return window;
 }

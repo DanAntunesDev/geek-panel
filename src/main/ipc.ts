@@ -4,6 +4,7 @@ import { IPC_CHANNELS } from "../shared/ipcChannels.js";
 import { allProviders, isSecretName } from "../shared/providers.js";
 import type { AuthService, PlaybackState, PlayerCommand } from "../shared/types.js";
 import { AgendaService } from "./agendaSource.js";
+import { createDeviceSystem, type DeviceSystem } from "./deviceSystem.js";
 import { probeDevice } from "./deviceProbe.js";
 import type { RunningServer } from "./httpServer.js";
 import { resolveMediaUrl } from "./mediaUrl.js";
@@ -19,6 +20,7 @@ const NO_PLAYBACK: PlaybackState = { available: false, source: null, player: nul
 export interface IpcDependencies {
   secrets: SecretStore;
   oauth: OAuthManager;
+  autostart: (enabled: boolean) => Promise<void>;
 }
 
 function assertTrustedSender(event: IpcMainInvokeEvent, window: BrowserWindow): void {
@@ -52,7 +54,16 @@ export function registerIpcHandlers(window: BrowserWindow, configStore: ConfigSt
       return handler(...args);
     };
 
-  ipcMain.handle(IPC_CHANNELS.getConfig, trusted(() => configStore.load()));
+  let device: DeviceSystem | null = null;
+
+  // Leitura de dados de exibição: a janela oculta do aparelho também pode pedir.
+  const readable = <T extends unknown[], R>(handler: (...args: T) => Promise<R> | R) =>
+    async (event: IpcMainInvokeEvent, ...args: T): Promise<R> => {
+      if (event.sender !== window.webContents && event.sender !== device?.webContents()) throw new Error("remetente IPC não autorizado");
+      return handler(...args);
+    };
+
+  ipcMain.handle(IPC_CHANNELS.getConfig, readable(() => configStore.load()));
 
   ipcMain.handle(
     IPC_CHANNELS.saveConfig,
@@ -61,6 +72,8 @@ export function registerIpcHandlers(window: BrowserWindow, configStore: ConfigSt
         const saved = await configStore.save(input);
         void agenda.refresh();
         void usage.refresh();
+        void device?.applyConfig(saved);
+        void deps.autostart(saved.app.startWithSystem).catch(() => undefined);
         return saved;
       } catch (error) {
         if (error instanceof ConfigValidationError) throw new Error(`configuração inválida: ${error.message}`);
@@ -75,13 +88,19 @@ export function registerIpcHandlers(window: BrowserWindow, configStore: ConfigSt
   const send = (channel: string, payload: unknown) => {
     if (!window.isDestroyed()) window.webContents.send(channel, payload);
   };
+  // As telas do aparelho (janela oculta) precisam dos mesmos dados da janela principal.
+  const broadcast = (channel: string, payload: unknown) => {
+    send(channel, payload);
+    device?.webContents()?.send(channel, payload);
+  };
   const agenda = new AgendaService({
     oauth: deps.oauth,
     clientId: async () => (await configStore.load()).media.googleClientId,
     config: () => configStore.load(),
-    onState: (state) => send(IPC_CHANNELS.agendaUpdated, state),
+    onState: (state) => broadcast(IPC_CHANNELS.agendaUpdated, state),
     onReminder: (reminder) => {
       send(IPC_CHANNELS.agendaReminder, reminder);
+      device?.forceAgenda();
       void configStore.load().then((config) => {
         if (!config.agenda.notify || !Notification.isSupported()) return;
         const time = new Date(reminder.start).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
@@ -94,17 +113,17 @@ export function registerIpcHandlers(window: BrowserWindow, configStore: ConfigSt
   });
   agenda.start();
   window.on("closed", () => agenda.stop());
-  ipcMain.handle(IPC_CHANNELS.getAgenda, trusted(() => agenda.state()));
+  ipcMain.handle(IPC_CHANNELS.getAgenda, readable(() => agenda.state()));
   ipcMain.handle(IPC_CHANNELS.refreshAgenda, trusted(() => agenda.refresh()));
 
   const usage = new UsageService({
     secrets: deps.secrets,
     config: () => configStore.load(),
-    onState: (cards) => send(IPC_CHANNELS.usageUpdated, cards),
+    onState: (cards) => broadcast(IPC_CHANNELS.usageUpdated, cards),
   });
   usage.start();
   window.on("closed", () => usage.stop());
-  ipcMain.handle(IPC_CHANNELS.getUsage, trusted(() => usage.state()));
+  ipcMain.handle(IPC_CHANNELS.getUsage, readable(() => usage.state()));
   ipcMain.handle(IPC_CHANNELS.refreshUsage, trusted(() => usage.refresh()));
 
   ipcMain.handle(
@@ -136,13 +155,24 @@ export function registerIpcHandlers(window: BrowserWindow, configStore: ConfigSt
     oauth: deps.oauth,
     onChange: (state) => {
       latest = state;
-      if (!window.isDestroyed()) window.webContents.send(IPC_CHANNELS.playbackUpdated, state);
+      broadcast(IPC_CHANNELS.playbackUpdated, state);
     },
   });
   playback.manager.start();
   window.on("closed", () => playback.stop());
 
-  ipcMain.handle(IPC_CHANNELS.getPlayback, trusted(() => latest));
+  device = createDeviceSystem({
+    config: () => configStore.load(),
+    save: (config) => configStore.save(config),
+    playback: () => latest,
+    agenda: () => agenda.state(),
+    notifyMain: send,
+  });
+  void device.start();
+  window.on("closed", () => void device?.stop());
+  ipcMain.handle(IPC_CHANNELS.getDeviceLink, trusted(() => device?.linkStatus()));
+
+  ipcMain.handle(IPC_CHANNELS.getPlayback, readable(() => latest));
   ipcMain.handle(
     IPC_CHANNELS.controlPlayback,
     trusted(async (command: unknown) => {

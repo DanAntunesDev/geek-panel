@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App.js";
+import { DeviceApp } from "./device/DeviceApp.js";
 
 const container = document.getElementById("root");
 if (!container) {
@@ -9,6 +10,6 @@ if (!container) {
 
 createRoot(container).render(
   <React.StrictMode>
-    <App />
+    {location.hash === "#device" ? <DeviceApp /> : <App />}
   </React.StrictMode>,
 );

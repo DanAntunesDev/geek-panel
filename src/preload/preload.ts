@@ -11,6 +11,8 @@ import type {
   AgendaReminder,
   AgendaState,
   DeviceCheck,
+  DeviceLinkStatus,
+  DeviceState,
   UsageCard,
   SecretStatus,
   PlaybackState,
@@ -41,6 +43,20 @@ const api = {
     ipcRenderer.on(IPC_CHANNELS.usageUpdated, listener);
     return () => ipcRenderer.removeListener(IPC_CHANNELS.usageUpdated, listener);
   },
+  getDeviceLink: (): Promise<DeviceLinkStatus> => ipcRenderer.invoke(IPC_CHANNELS.getDeviceLink),
+  onDeviceLinkUpdate: (callback: (status: DeviceLinkStatus) => void): (() => void) => {
+    const listener = (_event: unknown, status: DeviceLinkStatus) => callback(status);
+    ipcRenderer.on(IPC_CHANNELS.deviceLinkUpdated, listener);
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.deviceLinkUpdated, listener);
+  },
+  // usados só pela janela oculta que alimenta o aparelho
+  getDeviceState: (): Promise<DeviceState> => ipcRenderer.invoke(IPC_CHANNELS.getDeviceState),
+  onDeviceState: (callback: (state: DeviceState) => void): (() => void) => {
+    const listener = (_event: unknown, state: DeviceState) => callback(state);
+    ipcRenderer.on(IPC_CHANNELS.deviceStateUpdated, listener);
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.deviceStateUpdated, listener);
+  },
+  pushDeviceFrame: (pixels: Uint8Array): void => ipcRenderer.send(IPC_CHANNELS.deviceFrame, pixels),
   testDevice: (): Promise<DeviceCheck> => ipcRenderer.invoke(IPC_CHANNELS.testDevice),
   getPlayback: (): Promise<PlaybackState> => ipcRenderer.invoke(IPC_CHANNELS.getPlayback),
   onPlaybackUpdate: (callback: (state: PlaybackState) => void): (() => void) => {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import { ensureFont, type Ctx } from "./draw.js";
+import { useFrameTap } from "./FrameTap.js";
 import { useCssPerPixel } from "./PixelScale.js";
 
 interface PixelSceneProps {
@@ -22,13 +23,18 @@ export function PixelScene({ width, height, fps, draw, onPointerDown, onPointerU
   const frameRef = useRef(0);
   const drawRef = useRef(draw);
   const cssPerPixel = useCssPerPixel();
+  const tap = useFrameTap();
+  const tapRef = useRef(tap);
+  tapRef.current = tap;
 
   const paint = useCallback(() => {
-    const ctx = canvasRef.current?.getContext("2d");
+    // quem lê pixels toda hora avisa o navegador na criação do contexto
+    const ctx = canvasRef.current?.getContext("2d", tapRef.current ? { willReadFrequently: true } : undefined);
     if (!ctx) return;
     ctx.imageSmoothingEnabled = false;
     drawRef.current(ctx, frameRef.current);
-  }, []);
+    tapRef.current?.(ctx, width, height);
+  }, [width, height]);
 
   useEffect(() => {
     drawRef.current = draw;
