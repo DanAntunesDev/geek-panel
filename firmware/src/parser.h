@@ -33,6 +33,6 @@ class MessageParser {
   uint32_t pixelPos_;
   bool havePending_, overflow_;
   uint8_t pendingRun_;
-  uint8_t config_[24];
+  uint8_t config_[36];
   uint8_t brightness_;
 };

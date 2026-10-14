@@ -9,7 +9,7 @@ uint8_t frameBuf[FRAME_BYTES];
 
 // Mesmas cores do app (bg, surface, mid, ink, accent, accentShade) em RGB565.
 static const uint16_t DEFAULT_PALETTE[6] = {0xF7BE, 0xDEBA, 0x7BCE, 0x18E3, 0xE9B1, 0xA12D};
-static uint16_t palette[8];
+static uint16_t palette[16];
 static uint8_t paletteCount = 6;
 
 #define BACKLIGHT_PIN 5
@@ -29,7 +29,7 @@ void displayResetPalette() {
 
 // O app manda cada cor em RGB565 big-endian.
 void displayPalette(const uint8_t* bigEndian, uint8_t count) {
-  if (count > 8) count = 8;
+  if (count > 16) count = 16;
   for (uint8_t i = 0; i < count; i++) palette[i] = (bigEndian[i * 2] << 8) | bigEndian[i * 2 + 1];
   paletteCount = count;
 }
