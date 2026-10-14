@@ -2,7 +2,7 @@ import { allProviders, USAGE_PROVIDERS } from "../shared/providers.js";
 import type { AppConfig, UsageCard } from "../shared/types.js";
 import type { SecretStore } from "./secretStore.js";
 
-type FetchLike = (url: string, init: { headers: Record<string, string> }) => Promise<{ status: number; json(): Promise<unknown> }>;
+type FetchLike = (url: string, init: { headers: Record<string, string>; redirect?: "error" }) => Promise<{ status: number; json(): Promise<unknown> }>;
 
 export class UsageError extends Error {}
 
@@ -21,7 +21,7 @@ async function paged(
 ): Promise<Record<string, unknown>[]> {
   const bodies: Record<string, unknown>[] = [];
   for (let page = 0; page < MAX_PAGES; page += 1) {
-    const response = await fetchImpl(url.toString(), { headers });
+    const response = await fetchImpl(url.toString(), { headers, redirect: "error" });
     if (response.status === 401 || response.status === 403) throw new UsageError("chave admin recusada");
     if (response.status < 200 || response.status >= 300) throw new UsageError(`o provedor respondeu ${response.status}`);
     const body = (await response.json()) as Record<string, unknown>;

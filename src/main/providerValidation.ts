@@ -3,7 +3,7 @@
 
 import type { KeyCheck, ProviderSpec } from "../shared/types.js";
 
-type FetchLike = (url: string, init: { headers: Record<string, string>; signal: AbortSignal }) => Promise<{ status: number }>;
+type FetchLike = (url: string, init: { headers: Record<string, string>; signal: AbortSignal; redirect: "error" }) => Promise<{ status: number }>;
 
 export interface ValidateOptions {
   fetchImpl?: FetchLike;
@@ -31,6 +31,8 @@ export async function validateProviderKey(spec: ProviderSpec, key: string, optio
     const response = await fetchImpl(`${options.baseUrl ?? spec.baseUrl}${spec.path}`, {
       headers: authHeaders(spec, trimmed),
       signal: controller.signal,
+      // a chave não segue para outro endereço se o provedor redirecionar
+      redirect: "error",
     });
     if (response.status >= 200 && response.status < 300) return { state: "valid" };
     if (response.status === 401 || response.status === 403 || spec.invalidStatuses?.includes(response.status)) {

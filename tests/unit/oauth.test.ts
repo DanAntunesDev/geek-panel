@@ -86,9 +86,14 @@ describe("OAuthManager", () => {
     expect(raw).not.toContain("access-1");
   });
 
-  it("rejeita retorno com state diferente", async () => {
-    const oauth = manager(browser(() => "code=x&state=forjado"));
-    await expect(oauth.login("spotify", "client-123")).rejects.toThrow("inválida");
+  it("ignora retorno com state diferente e não conecta", async () => {
+    const oauth = new OAuthManager({
+      store: new SecretStore(dir, cipher),
+      openUrl: browser(() => "code=x&state=forjado"),
+      loginTimeoutMs: 400,
+      endpoints: { spotify: { authorizeUrl: `${idpUrl}/authorize`, tokenUrl: `${idpUrl}/token`, profileUrl: `${idpUrl}/me`, callbackPort: 0 } },
+    });
+    await expect(oauth.login("spotify", "client-123")).rejects.toThrow("tempo esgotado");
     expect((await oauth.status("spotify")).connected).toBe(false);
   });
 

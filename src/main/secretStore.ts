@@ -42,7 +42,7 @@ export class SecretStore {
   }
 
   private async write(file: SecretFile): Promise<void> {
-    await fs.mkdir(path.dirname(this.filePath), { recursive: true });
+    await fs.mkdir(path.dirname(this.filePath), { recursive: true, mode: 0o700 });
     const temporary = `${this.filePath}.tmp`;
     await fs.writeFile(temporary, JSON.stringify(file), { encoding: "utf-8", mode: 0o600 });
     await fs.rename(temporary, this.filePath);

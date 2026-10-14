@@ -213,7 +213,7 @@ export class ConfigStore {
 
   async save(input: unknown): Promise<AppConfig> {
     const validated = validateConfig(input);
-    await fs.mkdir(path.dirname(this.filePath), { recursive: true });
+    await fs.mkdir(path.dirname(this.filePath), { recursive: true, mode: 0o700 });
     await fs.writeFile(this.filePath, JSON.stringify(validated, null, 2), {
       encoding: "utf-8",
       mode: 0o600,

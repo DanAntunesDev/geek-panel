@@ -231,8 +231,9 @@ export class OAuthManager {
           "Content-Security-Policy": "default-src 'none'",
         });
         res.end(valid && received ? "<p>Conexão concluída. Pode fechar esta janela.</p>" : "<p>Não foi possível concluir a conexão.</p>");
+        // pedido com state errado é de outro programa: ignora, para ele não derrubar o login
+        if (!valid) return;
         if (failed) settle.reject(new Error(`autorização recusada (${failed})`));
-        else if (!valid) settle.reject(new Error("resposta de autorização inválida"));
         else if (received) settle.resolve(received);
       });
 
