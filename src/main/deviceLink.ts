@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 import { EventEmitter } from "node:events";
 import * as dgram from "node:dgram";
 import * as net from "node:net";
@@ -15,6 +16,13 @@ import {
   TCP_PORT,
 } from "../shared/deviceProtocol.js";
 import type { DeviceLinkStatus } from "../shared/types.js";
+
+// Código errado demais da mesma máquina: ela fica de fora por um tempo.
+const MAX_WRONG_CODES = 5;
+const BLOCK_MS = 60_000;
+const MAX_UNKNOWN_SOCKETS = 16;
+
+const digest = (value: string) => createHash("sha256").update(value).digest();
 
 export interface DeviceLinkOptions {
   tcpPort?: number;
@@ -39,6 +47,8 @@ export class DeviceLink extends EventEmitter {
   private lastFrameSent: Buffer | null = null;
   private brightness: number | null = null;
   private palette: readonly string[] | undefined;
+  private readonly wrongCodes = new Map<string, { count: number; blockedUntil: number }>();
+  private unknownSockets = 0;
   private lastHeard = 0;
   private lastSent = 0;
   private current: DeviceLinkStatus = { running: false, connected: false, address: null, since: null, framesSent: 0, error: null, rejected: null };
@@ -120,6 +130,15 @@ export class DeviceLink extends EventEmitter {
   }
 
   private accept(socket: net.Socket): void {
+    const address = socket.remoteAddress ?? "";
+    if ((this.wrongCodes.get(address)?.blockedUntil ?? 0) > Date.now() || this.unknownSockets >= MAX_UNKNOWN_SOCKETS) {
+      socket.destroy();
+      return;
+    }
+    this.unknownSockets += 1;
+    socket.once("close", () => {
+      this.unknownSockets -= 1;
+    });
     socket.setNoDelay(true);
     socket.setKeepAlive(true, 5000);
     socket.on("error", () => undefined);
@@ -137,10 +156,12 @@ export class DeviceLink extends EventEmitter {
         if (item.type === MESSAGE.hello && !ready) {
           const sentCode = Buffer.from(item.body.subarray(2, 2 + (item.body[1] ?? 0))).toString("ascii");
           if (!this.codeMatches(sentCode)) {
+            this.noteWrongCode(address);
             this.reject(socket);
             return;
           }
           ready = true;
+          this.wrongCodes.delete(address);
           clearTimeout(helloTimer);
           this.promote(socket);
         }
@@ -156,7 +177,17 @@ export class DeviceLink extends EventEmitter {
 
   private codeMatches(sent: string): boolean {
     const expected = this.options.pairingCode?.() ?? "";
-    return expected === "" || sent === expected;
+    return expected === "" || timingSafeEqual(digest(sent), digest(expected));
+  }
+
+  private noteWrongCode(address: string): void {
+    const entry = this.wrongCodes.get(address) ?? { count: 0, blockedUntil: 0 };
+    entry.count += 1;
+    if (entry.count >= MAX_WRONG_CODES) {
+      entry.blockedUntil = Date.now() + BLOCK_MS;
+      entry.count = 0;
+    }
+    this.wrongCodes.set(address, entry);
   }
 
   private reject(socket: net.Socket): void {

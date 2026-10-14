@@ -122,6 +122,19 @@ describe("DeviceLink", () => {
     right.socket.destroy();
   });
 
+  it("depois de errar o código várias vezes, a máquina fica bloqueada até para o código certo", async () => {
+    await link.stop();
+    link = new DeviceLink({ tcpPort: 0, discoveryPort: 0, helloWaitMs: 300, pairingCode: () => "482915" });
+    await link.start();
+
+    for (let attempt = 0; attempt < 5; attempt += 1) await (await fakeDevice(link.ports().tcp, "000000")).closed;
+
+    const blocked = await fakeDevice(link.ports().tcp, "482915");
+    await blocked.closed;
+    expect(blocked.received).toEqual([]);
+    expect(link.status().connected).toBe(false);
+  });
+
   it("descarta quem conecta e não se apresenta", async () => {
     await link.stop();
     link = new DeviceLink({ tcpPort: 0, discoveryPort: 0, helloWaitMs: 200 });
