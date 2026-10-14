@@ -2,7 +2,7 @@
   "name": "geek-panel",
   "private": true,
   "version": "0.1.0",
-  "description": "Painel local para display remoto compacto",
+  "description": "Painel em pixel art para o GeekMagic SmallTV",
   "main": "dist-electron/main/app.js",
   "scripts": {
     "dev": "vite",
