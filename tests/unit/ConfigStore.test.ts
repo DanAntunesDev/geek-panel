@@ -95,6 +95,21 @@ describe("validateConfig", () => {
     expect(() => validateConfig({ agenda: { enabled: "sim" } })).toThrow("agenda");
   });
 
+  it("valida as opções do aparelho: brilho, conexão automática e código de pareamento", () => {
+    expect(validateConfig({ device: { brightness: 100, autoConnect: false, pairingCode: "482915" } }).device).toMatchObject({ brightness: 100, autoConnect: false, pairingCode: "482915" });
+    expect(() => validateConfig({ device: { brightness: 101 } })).toThrow("brilho");
+    expect(() => validateConfig({ device: { brightness: 50.5 } })).toThrow("brilho");
+    expect(() => validateConfig({ device: { autoConnect: "sim" } })).toThrow("conexão");
+    expect(() => validateConfig({ device: { pairingCode: "tem espaço" } })).toThrow("pareamento");
+    expect(() => validateConfig({ device: { pairingCode: "x".repeat(17) } })).toThrow("pareamento");
+  });
+
+  it("iniciar com o sistema começa desligado e só aceita verdadeiro ou falso", () => {
+    expect(validateConfig({}).app.startWithSystem).toBe(false);
+    expect(validateConfig({ app: { startWithSystem: true } }).app.startWithSystem).toBe(true);
+    expect(() => validateConfig({ app: { startWithSystem: 1 } })).toThrow("sistema");
+  });
+
 });
 
 describe("ConfigStore", () => {

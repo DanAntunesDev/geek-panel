@@ -11,6 +11,9 @@ export const DEFAULT_CONFIG: AppConfig = {
     host: "192.168.1.5",
     port: 80,
     requestTimeoutMs: 1500,
+    autoConnect: true,
+    brightness: 60,
+    pairingCode: "",
   },
   server: {
     lanMode: false,
@@ -30,6 +33,9 @@ export const DEFAULT_CONFIG: AppConfig = {
     style: "digital",
     showSeconds: true,
     hour12: false,
+  },
+  app: {
+    startWithSystem: false,
   },
   agenda: {
     enabled: false,
@@ -90,6 +96,7 @@ export function validateConfig(input: unknown): AppConfig {
     device: { ...DEFAULT_CONFIG.device, ...candidate.device },
     server: { ...DEFAULT_CONFIG.server, ...candidate.server },
     rotation: { ...DEFAULT_CONFIG.rotation, ...migrateRotation(candidate.rotation) },
+    app: { ...DEFAULT_CONFIG.app, ...candidate.app },
     agenda: { ...DEFAULT_CONFIG.agenda, ...candidate.agenda },
     clock: { ...DEFAULT_CONFIG.clock, ...candidate.clock },
     media: {
@@ -133,6 +140,18 @@ export function validateConfig(input: unknown): AppConfig {
     if (!Number.isInteger(seconds) || seconds < 1 || seconds > 600) {
       throw new ConfigValidationError("duração de rotação fora do intervalo permitido");
     }
+  }
+  if (typeof merged.device.autoConnect !== "boolean") {
+    throw new ConfigValidationError("opção de conexão automática inválida");
+  }
+  if (!Number.isInteger(merged.device.brightness) || merged.device.brightness < 0 || merged.device.brightness > 100) {
+    throw new ConfigValidationError("brilho fora do intervalo permitido");
+  }
+  if (typeof merged.device.pairingCode !== "string" || !/^[0-9A-Za-z]{0,16}$/.test(merged.device.pairingCode)) {
+    throw new ConfigValidationError("código de pareamento inválido (até 16 letras ou números)");
+  }
+  if (typeof merged.app.startWithSystem !== "boolean") {
+    throw new ConfigValidationError("opção de iniciar com o sistema inválida");
   }
   validateAgenda(merged.agenda);
   merged.agenda.reminders = [...merged.agenda.reminders].sort((a, b) => b - a);

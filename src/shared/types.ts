@@ -74,6 +74,11 @@ export interface AppConfig {
     host: string;
     port: number;
     requestTimeoutMs: number;
+    // Aceita o aparelho assim que ele aparecer na rede.
+    autoConnect: boolean;
+    brightness: number;
+    // Código que o aparelho precisa informar para receber as telas (vazio = qualquer um).
+    pairingCode: string;
   };
   server: {
     lanMode: boolean;
@@ -93,6 +98,10 @@ export interface AppConfig {
     style: ClockStyle;
     showSeconds: boolean;
     hour12: boolean;
+  };
+  app: {
+    // Abre escondido, na bandeja, quando o computador liga.
+    startWithSystem: boolean;
   };
   agenda: {
     enabled: boolean;
@@ -119,6 +128,23 @@ export interface AppConfig {
     // Limite mensal de tokens por provedor, definido por você (0 = sem limite).
     limits: Record<string, number>;
   };
+}
+
+// O que a janela oculta deve desenhar para o aparelho.
+export interface DeviceState {
+  active: boolean;
+  screen: DisplayMode;
+}
+
+export interface DeviceLinkStatus {
+  running: boolean;
+  connected: boolean;
+  address: string | null;
+  since: string | null;
+  framesSent: number;
+  error: string | null;
+  // Endereço do último aparelho recusado por código errado.
+  rejected: string | null;
 }
 
 export type DeviceCheck =
