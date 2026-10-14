@@ -149,6 +149,14 @@ export interface DeviceLinkStatus {
   rejected: string | null;
 }
 
+export interface DeviceAdminResult {
+  ok: boolean;
+  // código HTTP da resposta; 0 quando o aparelho nem respondeu
+  status: number;
+  host: string;
+  message: string;
+}
+
 export type DeviceCheck =
   | { ok: true; model: string; version: string; freeBytes: number | null; status: number }
   // status é o código HTTP da última resposta, quando houve resposta

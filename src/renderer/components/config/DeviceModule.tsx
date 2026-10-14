@@ -20,12 +20,41 @@ const FAILURES = {
 
 export function DeviceModule({ config, setConfig, persist }: { config: AppConfig; setConfig: (next: AppConfig) => void; persist: () => Promise<void> }) {
   const [result, setResult] = useState<DeviceCheck | "testing" | null>(null);
+  const [busy, setBusy] = useState<"pair" | "reset" | null>(null);
   const [link, setLink] = useState<DeviceLinkStatus | null>(null);
 
   useEffect(() => {
     window.painelApi.getDeviceLink().then(setLink).catch(() => undefined);
     return window.painelApi.onDeviceLinkUpdate(setLink);
   }, []);
+
+  async function sendCode() {
+    setBusy("pair");
+    try {
+      await persist();
+      const result = await window.painelApi.pairDevice();
+      if (result.ok) notify("ok", `HTTP ${result.status}: código enviado para ${result.host}; ele reconecta em instantes`);
+      else notify("err", `${result.status ? `HTTP ${result.status}: ` : ""}${result.message} (${result.host})`);
+    } catch (error) {
+      notify("err", describeError(error));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function wipe() {
+    if (!window.confirm("Apagar o Wi-Fi e o código guardados no aparelho? Ele volta a abrir a rede GeekPanel para configurar de novo.")) return;
+    setBusy("reset");
+    try {
+      const result = await window.painelApi.resetDevice();
+      if (result.ok) notify("ok", `HTTP ${result.status}: aparelho apagado; procure a rede GeekPanel no celular`);
+      else notify("err", `${result.status ? `HTTP ${result.status}: ` : ""}${result.message} (${result.host})`);
+    } catch (error) {
+      notify("err", describeError(error));
+    } finally {
+      setBusy(null);
+    }
+  }
 
   async function test() {
     setResult("testing");
@@ -76,13 +105,15 @@ export function DeviceModule({ config, setConfig, persist }: { config: AppConfig
       {link?.rejected && !link.connected ? (
         <div className="cfg-alert" role="alert">
           <strong>APARELHO RECUSADO: CÓDIGO ERRADO</strong>
-          O aparelho em {link.rejected} mandou um código diferente do que está aqui ({config.device.pairingCode || "vazio"}). Abra http://{link.rejected}/
-          no navegador, digite este código no campo "Código" e salve.
+          O aparelho em {link.rejected} mandou um código diferente do que está aqui ({config.device.pairingCode || "vazio"}). Clique em ENVIAR
+          CÓDIGO AO APARELHO abaixo para acertar sozinho, ou apague o aparelho para recomeçar.
         </div>
       ) : null}
       <p className="cfg-note">
         {link?.connected ? (
           <Chip>APARELHO CONECTADO: {link.address}</Chip>
+        ) : link?.rejected ? (
+          <Chip tone="off">RECUSADO: CÓDIGO ERRADO</Chip>
         ) : link?.error ? (
           <Chip tone="off">ERRO: {link.error}</Chip>
         ) : link?.running ? (
@@ -106,6 +137,14 @@ export function DeviceModule({ config, setConfig, persist }: { config: AppConfig
             notify("ok", "código novo gerado: clique em SALVAR e digite no aparelho");
           }}>
           NOVO CÓDIGO
+        </button>
+      </div>
+      <div className="cfg-row">
+        <button className="px-btn px-btn-primary" type="button" disabled={busy !== null} onClick={sendCode}>
+          {busy === "pair" ? "ENVIANDO…" : "ENVIAR CÓDIGO AO APARELHO"}
+        </button>
+        <button className="px-btn" type="button" disabled={busy !== null} onClick={wipe}>
+          {busy === "reset" ? "APAGANDO…" : "APAGAR WI-FI E CÓDIGO DO APARELHO"}
         </button>
       </div>
       <p className="cfg-note">Só o aparelho com este código recebe as telas. Vazio libera qualquer aparelho da rede.</p>

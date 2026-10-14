@@ -10,6 +10,8 @@ export const IPC_CHANNELS = {
   agendaReminder: "agenda:reminder",
   refreshAgenda: "agenda:refresh",
   testDevice: "device:test",
+  pairDevice: "device:pair",
+  resetDevice: "device:reset",
   getDeviceLink: "device:link",
   deviceLinkUpdated: "device:link-updated",
   getDeviceState: "device:state",

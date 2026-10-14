@@ -9,6 +9,7 @@ import { probeDevice } from "./deviceProbe.js";
 import type { RunningServer } from "./httpServer.js";
 import { resolveMediaUrl } from "./mediaUrl.js";
 import type { OAuthManager } from "./oauth.js";
+import { callDevice } from "./deviceAdmin.js";
 import { createPlayback } from "./playbackSetup.js";
 import { validateProviderKey } from "./providerValidation.js";
 import { UsageService } from "./usageSource.js";
@@ -134,6 +135,18 @@ export function registerIpcHandlers(window: BrowserWindow, configStore: ConfigSt
       return probeDevice(device.host, device.port);
     }),
   );
+
+  // o aparelho que está falando com o app (ou foi recusado) vale mais que o IP salvo
+  async function deviceHost(): Promise<string> {
+    const link = device?.linkStatus();
+    return link?.address ?? link?.rejected ?? (await configStore.load()).device.host;
+  }
+
+  ipcMain.handle(
+    IPC_CHANNELS.pairDevice,
+    trusted(async () => callDevice(await deviceHost(), "/pair", { code: (await configStore.load()).device.pairingCode })),
+  );
+  ipcMain.handle(IPC_CHANNELS.resetDevice, trusted(async () => callDevice(await deviceHost(), "/reset", {})));
 
   ipcMain.on(IPC_CHANNELS.windowMinimize, (event) => {
     assertTrustedSender(event as IpcMainInvokeEvent, window);

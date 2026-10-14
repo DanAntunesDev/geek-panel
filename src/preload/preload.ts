@@ -10,6 +10,7 @@ import type {
   MediaUrlResult,
   AgendaReminder,
   AgendaState,
+  DeviceAdminResult,
   DeviceCheck,
   DeviceLinkStatus,
   DeviceState,
@@ -62,6 +63,8 @@ const api = {
     return () => ipcRenderer.removeListener(IPC_CHANNELS.themeUpdated, listener);
   },
   pushDeviceFrame: (pixels: Uint8Array): void => ipcRenderer.send(IPC_CHANNELS.deviceFrame, pixels),
+  pairDevice: (): Promise<DeviceAdminResult> => ipcRenderer.invoke(IPC_CHANNELS.pairDevice),
+  resetDevice: (): Promise<DeviceAdminResult> => ipcRenderer.invoke(IPC_CHANNELS.resetDevice),
   testDevice: (): Promise<DeviceCheck> => ipcRenderer.invoke(IPC_CHANNELS.testDevice),
   getPlayback: (): Promise<PlaybackState> => ipcRenderer.invoke(IPC_CHANNELS.getPlayback),
   onPlaybackUpdate: (callback: (state: PlaybackState) => void): (() => void) => {
