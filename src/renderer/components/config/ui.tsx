@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 export function Module({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -56,4 +56,41 @@ export function Segmented<T extends string>({
 export function Chip({ tone = "ink", children }: { tone?: "ink" | "mid" | "off"; children: ReactNode }) {
   const className = tone === "off" ? "px-chip px-chip-off" : tone === "mid" ? "px-chip px-chip-mid" : "px-chip";
   return <span className={className}>{children}</span>;
+}
+
+// Número digitado como texto: dá para apagar tudo e escrever de novo, sem o zero grudado.
+export function NumberField({
+  value,
+  onChange,
+  min = 0,
+  max = Number.MAX_SAFE_INTEGER,
+  placeholder,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  min?: number;
+  max?: number;
+  placeholder?: string;
+}) {
+  const [text, setText] = useState(String(value));
+
+  // mudança vinda de fora (carregar, salvar) atualiza o texto, menos enquanto o campo está vazio
+  useEffect(() => {
+    setText((current) => (current !== "" && Number(current) === value ? current : String(value)));
+  }, [value]);
+
+  return (
+    <input
+      className="px-input"
+      inputMode="numeric"
+      value={text}
+      placeholder={placeholder}
+      onChange={(event) => {
+        const digits = event.target.value.replace(/\D/g, "").slice(0, 9).replace(/^0+(?=\d)/, "");
+        setText(digits);
+        if (digits !== "") onChange(Math.min(max, Math.max(min, Number(digits))));
+      }}
+      onBlur={() => setText(String(value))}
+    />
+  );
 }

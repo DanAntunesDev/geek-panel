@@ -3,7 +3,7 @@ import { allProviders, BUILTIN_PROVIDERS, USAGE_PROVIDERS } from "../../../share
 import type { AppConfig, AuthStyle, KeyCheck, ProviderSpec, SecretStatus } from "../../../shared/types.js";
 import { describeError } from "./auth.js";
 import { act, notify } from "./toast.js";
-import { Check, Chip, Field, Segmented } from "./ui.js";
+import { Check, Chip, Field, NumberField, Segmented } from "./ui.js";
 
 type Verdict = KeyCheck | "checking" | null;
 
@@ -166,13 +166,7 @@ function ProviderRow({
           </div>
           <div className="cfg-row">
             <Field label="Limite mensal de tokens (0 = sem limite)">
-              <input
-                className="px-input"
-                type="number"
-                min={0}
-                value={limit}
-                onChange={(event) => onLimit(Math.max(0, Math.floor(Number(event.target.value) || 0)))}
-              />
+              <NumberField value={limit} onChange={onLimit} />
             </Field>
           </div>
         </>

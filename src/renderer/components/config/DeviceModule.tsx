@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { AppConfig, DeviceCheck, DeviceLinkStatus } from "../../../shared/types.js";
 import { describeError } from "./auth.js";
 import { notify } from "./toast.js";
-import { Check, Chip, Field } from "./ui.js";
+import { Check, Chip, Field, NumberField } from "./ui.js";
 
 function newCode(): string {
   return String(crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000).padStart(6, "0");
@@ -84,12 +84,7 @@ export function DeviceModule({ config, setConfig, persist }: { config: AppConfig
           />
         </Field>
         <Field label="Porta">
-          <input
-            className="px-input"
-            type="number"
-            value={config.device.port}
-            onChange={(event) => setConfig({ ...config, device: { ...config.device, port: Number(event.target.value) } })}
-          />
+          <NumberField value={config.device.port} min={1} max={65535} onChange={(port) => setConfig({ ...config, device: { ...config.device, port } })} />
         </Field>
         <button className="px-btn px-btn-primary" type="button" disabled={result === "testing"} onClick={test}>
           {result === "testing" ? "TESTANDO…" : "TESTAR CONEXÃO"}
@@ -150,15 +145,10 @@ export function DeviceModule({ config, setConfig, persist }: { config: AppConfig
       <p className="cfg-note">Só o aparelho com este código recebe as telas. Vazio libera qualquer aparelho da rede.</p>
       <div className="cfg-row">
         <Field label="Brilho do aparelho (0 a 100)">
-          <input
-            className="px-input"
-            type="number"
-            min={0}
-            max={100}
+          <NumberField
             value={config.device.brightness}
-            onChange={(event) =>
-              setConfig({ ...config, device: { ...config.device, brightness: Math.max(0, Math.min(100, Math.floor(Number(event.target.value) || 0))) } })
-            }
+            max={100}
+            onChange={(brightness) => setConfig({ ...config, device: { ...config.device, brightness } })}
           />
         </Field>
       </div>

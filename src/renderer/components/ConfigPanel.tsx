@@ -6,7 +6,7 @@ import { MediaModule } from "./config/MediaModule.js";
 import { ThemeModule } from "./config/ThemeModule.js";
 import { ProvidersModule } from "./config/ProvidersModule.js";
 import { notify, Toaster } from "./config/toast.js";
-import { Check, Divider, Field, Module, Segmented } from "./config/ui.js";
+import { Check, Divider, Field, Module, NumberField, Segmented } from "./config/ui.js";
 
 const ROTATION_MODES: { value: ManualMode; label: string }[] = [
   { value: "automatic", label: "AUTO" },
@@ -117,11 +117,11 @@ export function ConfigPanel() {
           <div className="cfg-row">
             {ROTATION_FIELDS.map((field) => (
               <Field key={field.key} label={field.label}>
-                <input
-                  className="px-input"
-                  type="number"
+                <NumberField
                   value={config.rotation[field.key]}
-                  onChange={(event) => update({ ...config, rotation: { ...config.rotation, [field.key]: Number(event.target.value) } })}
+                  min={1}
+                  max={3600}
+                  onChange={(value) => update({ ...config, rotation: { ...config.rotation, [field.key]: value } })}
                 />
               </Field>
             ))}
