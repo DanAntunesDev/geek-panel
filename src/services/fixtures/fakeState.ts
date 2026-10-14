@@ -54,8 +54,7 @@ export function buildFakeUsageCards(): UsageCard[] {
   ];
 }
 
-export function buildFakeClockState(config: ClockConfig): ClockState {
-  const now = new Date();
+export function buildFakeClockState(config: ClockConfig, now: Date = new Date()): ClockState {
   return {
     time: now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: config.timezone }),
     date: config.showDate ? now.toLocaleDateString("pt-BR", { timeZone: config.timezone }) : null,

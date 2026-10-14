@@ -36,6 +36,49 @@ describe("validateConfig", () => {
     expect(() => validateConfig(null)).toThrow(ConfigValidationError);
     expect(() => validateConfig("texto")).toThrow(ConfigValidationError);
   });
+  it("rejeita estilo de relógio e fuso horário inválidos", () => {
+    expect(() => validateConfig({ clock: { style: "neon" } })).toThrow(ConfigValidationError);
+    expect(() => validateConfig({ clock: { timezone: "Marte/Olympus" } })).toThrow("fuso");
+  });
+
+  it("aceita links do próprio serviço e rejeita outros hosts ou http", () => {
+    const withUrl = (service: string, url: string) => ({ media: { sources: { [service]: { enabled: true, url } } } });
+    expect(() => validateConfig(withUrl("spotify", "https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC"))).not.toThrow();
+    expect(() => validateConfig(withUrl("youtube", "https://youtu.be/dQw4w9WgXcQ"))).not.toThrow();
+    expect(() => validateConfig(withUrl("spotify", "https://evil.example/track/x"))).toThrow(ConfigValidationError);
+    expect(() => validateConfig(withUrl("youtube", "http://youtu.be/dQw4w9WgXcQ"))).toThrow(ConfigValidationError);
+  });
+
+  it("completa fontes e provedores ausentes com o padrão", () => {
+    const result = validateConfig({ media: { sources: { spotify: { enabled: true } } }, usage: { providers: { openai: { enabled: true } } } });
+    expect(result.media.sources.spotify).toEqual({ enabled: true, url: "" });
+    expect(result.media.sources.youtube).toEqual({ enabled: false, url: "" });
+    expect(result.usage.providers.openai.enabled).toBe(true);
+    expect(result.usage.providers.gemini.enabled).toBe(false);
+  });
+
+  it("rejeita ID de aplicativo com caracteres estranhos", () => {
+    expect(() => validateConfig({ media: { spotifyClientId: "abc def<script>" } })).toThrow("ID");
+  });
+
+  it("aceita provedor personalizado e cria o registro de ativação", () => {
+    const custom = { id: "meu-provedor", label: "Meu", baseUrl: "https://api.exemplo.com", path: "/v1/models", authStyle: "bearer" };
+    const result = validateConfig({ usage: { customProviders: [custom], providers: { "meu-provedor": { enabled: true }, fantasma: { enabled: true } } } });
+    expect(result.usage.providers["meu-provedor"]).toEqual({ enabled: true });
+    expect(result.usage.providers.fantasma).toBeUndefined();
+    expect(result.usage.providers.openai).toEqual({ enabled: false });
+  });
+
+  it("rejeita provedor personalizado inseguro ou repetido", () => {
+    const base = { id: "meu-provedor", label: "Meu", baseUrl: "https://api.exemplo.com", path: "/v1/models", authStyle: "bearer" };
+    const withProvider = (patch: object) => ({ usage: { customProviders: [{ ...base, ...patch }] } });
+    expect(() => validateConfig(withProvider({ baseUrl: "http://api.exemplo.com" }))).toThrow("https");
+    expect(() => validateConfig(withProvider({ baseUrl: "https://api.exemplo.com/v1" }))).toThrow("https");
+    expect(() => validateConfig(withProvider({ id: "openai" }))).toThrow("repetido");
+    expect(() => validateConfig(withProvider({ path: "v1/models" }))).toThrow("rota");
+    expect(() => validateConfig(withProvider({ authStyle: "header", headerName: "x y" }))).toThrow("cabeçalho");
+  });
+
 });
 
 describe("ConfigStore", () => {

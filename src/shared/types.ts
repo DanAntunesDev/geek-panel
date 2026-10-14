@@ -1,6 +1,6 @@
 // Tipos compartilhados entre processo principal, renderer e servidor local.
 
-export type DisplayMode = "player" | "usage" | "clock";
+export type DisplayMode = "player" | "usage" | "clock" | "network";
 
 export type ManualMode = DisplayMode | "automatic";
 
@@ -37,6 +37,30 @@ export interface UsageCard {
   updatedAt: string;
 }
 
+export type StreamingServiceId = "spotify" | "youtubeMusic" | "youtube";
+
+export type AuthStyle = "bearer" | "x-api-key" | "header";
+
+export interface ProviderSpec {
+  id: string;
+  label: string;
+  baseUrl: string;
+  // Rota de leitura usada só para testar a chave.
+  path: string;
+  authStyle: AuthStyle;
+  headerName?: string;
+  extraHeaders?: Record<string, string>;
+  invalidStatuses?: number[];
+}
+
+export interface StreamingSourceConfig {
+  enabled: boolean;
+  // Link opcional de música, vídeo ou playlist (validado ao salvar).
+  url: string;
+}
+
+export type ClockStyle = "digital" | "analog" | "flip";
+
 export interface ClockState {
   time: string;
   date: string | null;
@@ -59,21 +83,60 @@ export interface AppConfig {
     playerSeconds: number;
     usageSeconds: number;
     clockSeconds: number;
+    networkSeconds: number;
   };
   clock: {
     timezone: string;
     showDate: boolean;
+    style: ClockStyle;
+    showSeconds: boolean;
+    hour12: boolean;
   };
   media: {
     pollIntervalMs: number;
     artworkPath: string | null;
     gifPath: string | null;
+    // Detecta o que está tocando nos players abertos nesta máquina.
+    systemPlayers: boolean;
+    // IDs públicos de aplicativo; segredos ficam no armazenamento seguro.
+    spotifyClientId: string;
+    googleClientId: string;
+    sources: Record<StreamingServiceId, StreamingSourceConfig>;
   };
   usage: {
     source: "file";
     path: string;
+    providers: Record<string, { enabled: boolean }>;
+    customProviders: ProviderSpec[];
   };
 }
+
+// Espelha um subconjunto de ~/internet-monitor/state.json, escrito por um
+// daemon externo (Internet Watch) já instalado e rodando via systemd --user
+// nesta máquina. O geek-panel só lê esse arquivo — não reimplementa o
+// monitoramento nem gerencia o serviço.
+export type NetworkStatus = "ONLINE" | "DEGRADED" | "OFFLINE" | "UNKNOWN";
+
+export interface NetworkOnuState {
+  enabled: boolean;
+  rxDbm: number | null;
+  txDbm: number | null;
+  temperatureC: number | null;
+  uptime: string | null;
+}
+
+export interface NetworkState {
+  available: true;
+  status: NetworkStatus;
+  reason: string;
+  gatewayLatencyMs: number | null;
+  externalAvgLatencyMs: number | null;
+  externalLossPct: number | null;
+  onu: NetworkOnuState | null;
+  updatedAt: string;
+}
+
+export type NetworkStateOrUnavailable = NetworkState | { available: false };
 
 export type ConnectionTestResult =
   | { outcome: "success"; latencyMs: number }
@@ -81,3 +144,51 @@ export type ConnectionTestResult =
   | { outcome: "refused" }
   | { outcome: "dns-error" }
   | { outcome: "invalid-response" };
+
+// Resultado da validação de uma chave de provedor (nunca carrega a chave).
+export type KeyCheck =
+  | { state: "valid" }
+  | { state: "limited" }
+  | { state: "invalid" }
+  | { state: "error"; reason: string };
+
+export interface SecretStatus {
+  configured: boolean;
+  // Máscara com os 4 últimos caracteres; nunca o segredo inteiro.
+  hint: string | null;
+}
+
+export type AuthService = "spotify" | "google";
+
+export interface AuthStatus {
+  connected: boolean;
+  account: string | null;
+}
+
+export type MediaUrlResult =
+  | {
+      ok: true;
+      service: StreamingServiceId;
+      kind: "track" | "album" | "playlist" | "episode" | "show" | "video";
+      id: string;
+      title: string;
+      author: string | null;
+      canonicalUrl: string;
+    }
+  | { ok: false; reason: "invalid-url" | "not-found" | "network" };
+
+export type PlaybackSourceId = "system" | "spotify" | "youtube";
+
+export interface PlaybackState {
+  available: boolean;
+  source: PlaybackSourceId | null;
+  player: string | null;
+  media: MediaState | null;
+}
+
+export type PlayerCommand =
+  | { type: "playPause" }
+  | { type: "next" }
+  | { type: "previous" }
+  | { type: "seekBy"; seconds: number }
+  | { type: "seekTo"; seconds: number };

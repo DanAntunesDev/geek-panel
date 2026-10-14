@@ -1,24 +1,41 @@
-import type { ClockState } from "../../shared/types.js";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { AppConfig } from "../../shared/types.js";
+import { PixelScene } from "../pixel/PixelScene.js";
+import { CLOCK_SCENE_SIZE, clockParts, drawClock, newFlipState } from "./clockScene.js";
 
-export function ClockScreen({ clock, connected }: { clock: ClockState; connected: boolean }) {
-  return (
-    <section style={{ padding: 24, textAlign: "center" }}>
-      <p style={{ fontSize: 48, fontWeight: "bold", margin: "32px 0 8px" }}>{clock.time}</p>
-      {clock.date ? <p style={{ margin: 0 }}>{clock.date}</p> : null}
-      <p style={{ marginTop: 24, fontSize: 12 }}>
-        <span
-          aria-hidden
-          style={{
-            display: "inline-block",
-            width: 8,
-            height: 8,
-            borderRadius: "50%",
-            background: connected ? "var(--cor-acento)" : "var(--cor-superficie)",
-            marginRight: 6,
-          }}
-        />
-        {connected ? "display conectado" : "display desconectado"}
-      </p>
-    </section>
+const FPS = 10;
+
+const FALLBACK_CLOCK_CONFIG: AppConfig["clock"] = {
+  timezone: "America/Sao_Paulo",
+  showDate: true,
+  style: "digital",
+  showSeconds: true,
+  hour12: false,
+};
+
+export function ClockScreen({ connected }: { connected: boolean }) {
+  const [clockConfig, setClockConfig] = useState<AppConfig["clock"]>(FALLBACK_CLOCK_CONFIG);
+  const flip = useRef(newFlipState());
+
+  useEffect(() => {
+    window.painelApi.getConfig().then((config) => setClockConfig(config.clock));
+  }, []);
+
+  const draw = useCallback(
+    (ctx: CanvasRenderingContext2D, frame: number) => {
+      drawClock(ctx, {
+        style: clockConfig.style,
+        parts: clockParts(new Date(), clockConfig.timezone),
+        showSeconds: clockConfig.showSeconds,
+        showDate: clockConfig.showDate,
+        hour12: clockConfig.hour12,
+        connected,
+        frame,
+        flip: flip.current,
+      });
+    },
+    [clockConfig, connected],
   );
+
+  return <PixelScene width={CLOCK_SCENE_SIZE} height={CLOCK_SCENE_SIZE} fps={FPS} draw={draw} label="Relógio" />;
 }

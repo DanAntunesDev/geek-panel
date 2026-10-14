@@ -3,7 +3,8 @@
 
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
-import type { AppConfig } from "../shared/types.js";
+import { BUILTIN_PROVIDERS, PROVIDER_ID_PATTERN } from "../shared/providers.js";
+import type { AppConfig, ProviderSpec, StreamingServiceId } from "../shared/types.js";
 
 export const DEFAULT_CONFIG: AppConfig = {
   device: {
@@ -21,21 +22,46 @@ export const DEFAULT_CONFIG: AppConfig = {
     playerSeconds: 30,
     usageSeconds: 10,
     clockSeconds: 30,
+    networkSeconds: 20,
   },
   clock: {
     timezone: "America/Sao_Paulo",
     showDate: true,
+    style: "digital",
+    showSeconds: true,
+    hour12: false,
   },
   media: {
     pollIntervalMs: 1000,
     artworkPath: null,
     gifPath: null,
+    systemPlayers: true,
+    spotifyClientId: "",
+    googleClientId: "",
+    sources: {
+      spotify: { enabled: false, url: "" },
+      youtubeMusic: { enabled: false, url: "" },
+      youtube: { enabled: false, url: "" },
+    },
   },
   usage: {
     source: "file",
     path: "~/.config/geek-panel/usage.json",
+    providers: {
+      openai: { enabled: false },
+      anthropic: { enabled: false },
+      gemini: { enabled: false },
+    },
+    customProviders: [],
   },
 };
+
+// Mescla um registro de objetos chave a chave com os padrões (ignora chaves desconhecidas).
+function mergeEach<T extends object>(defaults: Record<string, T>, input: Partial<Record<string, Partial<T>>> | undefined): Record<string, T> {
+  return Object.fromEntries(Object.entries(defaults).map(([key, value]) => [key, { ...value, ...input?.[key] }]));
+}
+
+const CLIENT_ID_PATTERN = /^[A-Za-z0-9._-]{0,128}$/;
 
 const HOST_PATTERN = /^(\d{1,3}\.){3}\d{1,3}$|^[a-zA-Z0-9.-]+$/;
 
@@ -53,9 +79,23 @@ export function validateConfig(input: unknown): AppConfig {
     server: { ...DEFAULT_CONFIG.server, ...candidate.server },
     rotation: { ...DEFAULT_CONFIG.rotation, ...candidate.rotation },
     clock: { ...DEFAULT_CONFIG.clock, ...candidate.clock },
-    media: { ...DEFAULT_CONFIG.media, ...candidate.media },
-    usage: { ...DEFAULT_CONFIG.usage, ...candidate.usage },
+    media: {
+      ...DEFAULT_CONFIG.media,
+      ...candidate.media,
+      sources: mergeEach(DEFAULT_CONFIG.media.sources, candidate.media?.sources),
+    },
+    usage: {
+      ...DEFAULT_CONFIG.usage,
+      ...candidate.usage,
+      customProviders: candidate.usage?.customProviders ?? [],
+      providers: {},
+    },
   };
+  validateCustomProviders(merged.usage.customProviders);
+  const providerIds = [...Object.keys(DEFAULT_CONFIG.usage.providers), ...merged.usage.customProviders.map((provider) => provider.id)];
+  merged.usage.providers = Object.fromEntries(
+    providerIds.map((id) => [id, { enabled: candidate.usage?.providers?.[id]?.enabled === true }]),
+  );
 
   if (!HOST_PATTERN.test(merged.device.host)) {
     throw new ConfigValidationError("host inválido");
@@ -69,12 +109,29 @@ export function validateConfig(input: unknown): AppConfig {
   if (merged.device.requestTimeoutMs < 100 || merged.device.requestTimeoutMs > 10_000) {
     throw new ConfigValidationError("timeout de requisição fora do intervalo permitido");
   }
-  for (const seconds of [merged.rotation.playerSeconds, merged.rotation.usageSeconds, merged.rotation.clockSeconds]) {
+  for (const seconds of [
+    merged.rotation.playerSeconds,
+    merged.rotation.usageSeconds,
+    merged.rotation.clockSeconds,
+    merged.rotation.networkSeconds,
+  ]) {
     if (!Number.isInteger(seconds) || seconds < 1 || seconds > 600) {
       throw new ConfigValidationError("duração de rotação fora do intervalo permitido");
     }
   }
-  if (!["player", "usage", "clock", "automatic"].includes(merged.rotation.mode)) {
+  validateMedia(merged.media);
+  if (!["digital", "analog", "flip"].includes(merged.clock.style)) {
+    throw new ConfigValidationError("estilo de relógio inválido");
+  }
+  if (typeof merged.clock.showSeconds !== "boolean" || typeof merged.clock.hour12 !== "boolean") {
+    throw new ConfigValidationError("opções de relógio inválidas");
+  }
+  try {
+    new Intl.DateTimeFormat("pt-BR", { timeZone: merged.clock.timezone });
+  } catch {
+    throw new ConfigValidationError("fuso horário inválido");
+  }
+  if (!["player", "usage", "clock", "network", "automatic"].includes(merged.rotation.mode)) {
     throw new ConfigValidationError("modo de rotação inválido");
   }
 
@@ -108,5 +165,70 @@ export class ConfigStore {
       mode: 0o600,
     });
     return validated;
+  }
+}
+
+const SERVICE_HOSTS: Record<StreamingServiceId, string[]> = {
+  spotify: ["open.spotify.com"],
+  youtubeMusic: ["music.youtube.com", "www.youtube.com", "youtube.com", "youtu.be"],
+  youtube: ["www.youtube.com", "youtube.com", "m.youtube.com", "youtu.be", "music.youtube.com"],
+};
+
+function validateMedia(media: AppConfig["media"]): void {
+  if (typeof media.systemPlayers !== "boolean") {
+    throw new ConfigValidationError("opção de players do sistema inválida");
+  }
+  if (!CLIENT_ID_PATTERN.test(media.spotifyClientId) || !CLIENT_ID_PATTERN.test(media.googleClientId)) {
+    throw new ConfigValidationError("ID de aplicativo inválido");
+  }
+  for (const [service, source] of Object.entries(media.sources) as [StreamingServiceId, AppConfig["media"]["sources"][StreamingServiceId]][]) {
+    if (typeof source.enabled !== "boolean" || typeof source.url !== "string" || source.url.length > 300) {
+      throw new ConfigValidationError(`fonte ${service} inválida`);
+    }
+    if (source.url === "") continue;
+    let parsed: URL;
+    try {
+      parsed = new URL(source.url);
+    } catch {
+      throw new ConfigValidationError(`link de ${service} inválido`);
+    }
+    if (parsed.protocol !== "https:" || !SERVICE_HOSTS[service].includes(parsed.hostname)) {
+      throw new ConfigValidationError(`link de ${service} deve ser https e do próprio serviço`);
+    }
+  }
+}
+
+const HEADER_NAME_PATTERN = /^[A-Za-z0-9-]{1,40}$/;
+
+function validateCustomProviders(list: ProviderSpec[]): void {
+  if (!Array.isArray(list) || list.length > 20) throw new ConfigValidationError("lista de provedores inválida");
+  const seen = new Set(BUILTIN_PROVIDERS.map((provider) => provider.id));
+  for (const provider of list) {
+    if (typeof provider?.id !== "string" || !PROVIDER_ID_PATTERN.test(provider.id) || seen.has(provider.id)) {
+      throw new ConfigValidationError("identificador de provedor inválido ou repetido");
+    }
+    seen.add(provider.id);
+    if (typeof provider.label !== "string" || provider.label.trim() === "" || provider.label.length > 40) {
+      throw new ConfigValidationError("nome do provedor inválido");
+    }
+    let origin: URL;
+    try {
+      origin = new URL(provider.baseUrl);
+    } catch {
+      throw new ConfigValidationError("endereço do provedor inválido");
+    }
+    // Só https puro e sem caminho, para a chave nunca ir em texto aberto.
+    if (origin.protocol !== "https:" || origin.pathname !== "/" || origin.search || origin.username || origin.password) {
+      throw new ConfigValidationError("o endereço do provedor deve ser https, sem caminho");
+    }
+    if (typeof provider.path !== "string" || !/^\/[\w./-]{0,99}$/.test(provider.path)) {
+      throw new ConfigValidationError("rota de teste do provedor inválida");
+    }
+    if (!["bearer", "x-api-key", "header"].includes(provider.authStyle)) {
+      throw new ConfigValidationError("tipo de autenticação inválido");
+    }
+    if (provider.authStyle === "header" && !HEADER_NAME_PATTERN.test(provider.headerName ?? "")) {
+      throw new ConfigValidationError("nome do cabeçalho inválido");
+    }
   }
 }
