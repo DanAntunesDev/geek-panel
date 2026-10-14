@@ -1,5 +1,21 @@
 // Tipos compartilhados entre processo principal, renderer e servidor local.
 
+// Cores em #RRGGBB; null deixa a tela com o visual original.
+export interface ThemeConfig {
+  // Destaque do app e do aparelho.
+  accent: string;
+  // Cor de cada um dos dois primeiros provedores na tela Tokens.
+  tokens: (string | null)[];
+  clock: {
+    hour: string | null;
+    minute: string | null;
+    second: string | null;
+    date: string | null;
+    weekday: string | null;
+    city: string | null;
+  };
+}
+
 export type DisplayMode = "player" | "usage" | "clock" | "agenda";
 
 export type ManualMode = DisplayMode | "automatic";
@@ -102,11 +118,10 @@ export interface AppConfig {
     style: ClockStyle;
     showSeconds: boolean;
     hour12: boolean;
+    // Nome da cidade na tela; vazio usa o nome do fuso.
+    city: string;
   };
-  theme: {
-    // Cor de destaque (#RRGGBB), no app e no aparelho.
-    accent: string;
-  };
+  theme: ThemeConfig;
   app: {
     // Abre escondido, na bandeja, quando o computador liga.
     startWithSystem: boolean;

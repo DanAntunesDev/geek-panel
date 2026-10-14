@@ -1,8 +1,8 @@
 import { randomInt } from "node:crypto";
 import { BrowserWindow, ipcMain } from "electron";
 import { IPC_CHANNELS } from "../shared/ipcChannels.js";
-import { themePalette } from "../shared/theme.js";
-import { DEVICE_PALETTE, FRAME_SIZE } from "../shared/deviceProtocol.js";
+import { PALETTE_SIZE, themePalette } from "../shared/theme.js";
+import { FRAME_SIZE } from "../shared/deviceProtocol.js";
 import type { AgendaState, AppConfig, DeviceLinkStatus, DeviceState, DisplayMode, PlaybackState } from "../shared/types.js";
 import { DeviceLink } from "./deviceLink.js";
 import { DisplayScheduler } from "./displayScheduler.js";
@@ -85,14 +85,14 @@ export function createDeviceSystem(deps: Deps) {
     const pixels = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
     if (pixels.length !== FRAME_SIZE * FRAME_SIZE) return;
     // índice fora da paleta deixaria o aparelho desenhando cor aleatória
-    for (let index = 0; index < pixels.length; index += 1) if (pixels[index] >= DEVICE_PALETTE.length) return;
+    for (let index = 0; index < pixels.length; index += 1) if (pixels[index] >= PALETTE_SIZE) return;
     link.setFrame(pixels);
   });
 
   async function applyConfig(next: AppConfig): Promise<void> {
     config = next;
     link.setBrightness(next.device.brightness);
-    link.setPalette(themePalette(next.theme.accent));
+    link.setPalette(themePalette(next.theme));
     scheduler.tick();
     if (next.device.autoConnect) await link.start().catch(() => undefined);
     else if (link.status().running) await link.stop();

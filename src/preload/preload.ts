@@ -12,6 +12,7 @@ import type {
   AgendaState,
   DeviceAdminResult,
   DeviceCheck,
+  ThemeConfig,
   DeviceLinkStatus,
   DeviceState,
   UsageCard,
@@ -57,8 +58,8 @@ const api = {
     ipcRenderer.on(IPC_CHANNELS.deviceStateUpdated, listener);
     return () => ipcRenderer.removeListener(IPC_CHANNELS.deviceStateUpdated, listener);
   },
-  onThemeUpdate: (callback: (accent: string) => void): (() => void) => {
-    const listener = (_event: unknown, accent: string) => callback(accent);
+  onThemeUpdate: (callback: (theme: ThemeConfig) => void): (() => void) => {
+    const listener = (_event: unknown, theme: ThemeConfig) => callback(theme);
     ipcRenderer.on(IPC_CHANNELS.themeUpdated, listener);
     return () => ipcRenderer.removeListener(IPC_CHANNELS.themeUpdated, listener);
   },

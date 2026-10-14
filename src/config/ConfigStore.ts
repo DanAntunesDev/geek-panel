@@ -4,7 +4,7 @@
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { BUILTIN_PROVIDERS, PROVIDER_ID_PATTERN } from "../shared/providers.js";
-import { ACCENT_PATTERN, DEFAULT_ACCENT } from "../shared/theme.js";
+import { ACCENT_PATTERN, DEFAULT_THEME } from "../shared/theme.js";
 import type { AppConfig, ProviderSpec, StreamingServiceId } from "../shared/types.js";
 
 export const DEFAULT_CONFIG: AppConfig = {
@@ -35,10 +35,9 @@ export const DEFAULT_CONFIG: AppConfig = {
     style: "digital",
     showSeconds: true,
     hour12: false,
+    city: "",
   },
-  theme: {
-    accent: DEFAULT_ACCENT,
-  },
+  theme: DEFAULT_THEME,
   app: {
     startWithSystem: false,
   },
@@ -104,7 +103,12 @@ export function validateConfig(input: unknown): AppConfig {
       ...migrateRotation(candidate.rotation),
       enabled: { ...DEFAULT_CONFIG.rotation.enabled, ...candidate.rotation?.enabled },
     },
-    theme: { ...DEFAULT_CONFIG.theme, ...candidate.theme },
+    theme: {
+      ...DEFAULT_CONFIG.theme,
+      ...candidate.theme,
+      tokens: [...(candidate.theme?.tokens ?? DEFAULT_CONFIG.theme.tokens)],
+      clock: { ...DEFAULT_CONFIG.theme.clock, ...candidate.theme?.clock },
+    },
     app: { ...DEFAULT_CONFIG.app, ...candidate.app },
     agenda: { ...DEFAULT_CONFIG.agenda, ...candidate.agenda },
     clock: { ...DEFAULT_CONFIG.clock, ...candidate.clock },
@@ -169,7 +173,7 @@ export function validateConfig(input: unknown): AppConfig {
   if (typeof merged.theme.accent !== "string" || !ACCENT_PATTERN.test(merged.theme.accent)) {
     throw new ConfigValidationError("cor de destaque inválida (use #RRGGBB)");
   }
-  merged.theme.accent = merged.theme.accent.toUpperCase();
+  validateTheme(merged.theme);
   if (typeof merged.app.startWithSystem !== "boolean") {
     throw new ConfigValidationError("opção de iniciar com o sistema inválida");
   }
@@ -181,6 +185,9 @@ export function validateConfig(input: unknown): AppConfig {
   }
   if (typeof merged.clock.showSeconds !== "boolean" || typeof merged.clock.hour12 !== "boolean") {
     throw new ConfigValidationError("opções de relógio inválidas");
+  }
+  if (typeof merged.clock.city !== "string" || merged.clock.city.length > 24) {
+    throw new ConfigValidationError("nome da cidade inválido (até 24 letras)");
   }
   try {
     new Intl.DateTimeFormat("pt-BR", { timeZone: merged.clock.timezone });
@@ -287,6 +294,18 @@ function validateCustomProviders(list: ProviderSpec[]): void {
       throw new ConfigValidationError("nome do cabeçalho inválido");
     }
   }
+}
+
+function validateTheme(theme: AppConfig["theme"]): void {
+  theme.accent = theme.accent.toUpperCase();
+  const optional = (value: unknown): string | null => {
+    if (value === null || value === undefined || value === "") return null;
+    if (typeof value !== "string" || !ACCENT_PATTERN.test(value)) throw new ConfigValidationError("cor inválida (use #RRGGBB)");
+    return value.toUpperCase();
+  };
+  if (!Array.isArray(theme.tokens) || theme.tokens.length > 2) throw new ConfigValidationError("cores de tokens inválidas");
+  theme.tokens = [optional(theme.tokens[0]), optional(theme.tokens[1])];
+  for (const key of Object.keys(theme.clock) as (keyof AppConfig["theme"]["clock"])[]) theme.clock[key] = optional(theme.clock[key]);
 }
 
 function validateAgenda(agenda: AppConfig["agenda"]): void {
