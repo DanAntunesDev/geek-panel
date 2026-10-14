@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { allProviders, BUILTIN_PROVIDERS } from "../../../shared/providers.js";
+import { allProviders, BUILTIN_PROVIDERS, USAGE_PROVIDERS } from "../../../shared/providers.js";
 import type { AppConfig, AuthStyle, KeyCheck, ProviderSpec, SecretStatus } from "../../../shared/types.js";
 import { Check, Chip, Field, Segmented } from "./ui.js";
 
@@ -20,13 +20,21 @@ function ProviderRow({
   enabled,
   onEnabled,
   onRemove,
+  limit,
+  onLimit,
 }: {
   id: string;
   label: string;
   enabled: boolean;
   onEnabled: (value: boolean) => void;
   onRemove?: () => Promise<void>;
+  limit: number;
+  onLimit: (value: number) => void;
 }) {
+  const supportsUsage = USAGE_PROVIDERS.includes(id);
+  const usageName = `usage:${id}`;
+  const [usageStatus, setUsageStatus] = useState<SecretStatus>({ configured: false, hint: null });
+  const [usageInput, setUsageInput] = useState("");
   const secretName = `provider:${id}`;
   const [status, setStatus] = useState<SecretStatus>({ configured: false, hint: null });
   const [input, setInput] = useState("");
@@ -35,7 +43,24 @@ function ProviderRow({
 
   useEffect(() => {
     window.painelApi.getSecretStatus(secretName).then(setStatus).catch(() => undefined);
-  }, [secretName]);
+    if (supportsUsage) window.painelApi.getSecretStatus(usageName).then(setUsageStatus).catch(() => undefined);
+  }, [secretName, usageName, supportsUsage]);
+
+  async function saveUsageKey() {
+    setError(null);
+    try {
+      await window.painelApi.setSecret(usageName, usageInput);
+      setUsageStatus(await window.painelApi.getSecretStatus(usageName));
+      setUsageInput("");
+    } catch (err) {
+      setError((err instanceof Error ? err.message : "falha").replace(/^Error invoking remote method '[^']+': (Error: )?/, ""));
+    }
+  }
+
+  async function clearUsageKey() {
+    await window.painelApi.clearSecret(usageName);
+    setUsageStatus({ configured: false, hint: null });
+  }
 
   async function validate() {
     setVerdict("checking");
@@ -102,6 +127,43 @@ function ProviderRow({
           </button>
         ) : null}
       </div>
+      {supportsUsage ? (
+        <>
+          <h3 className="cfg-sub">CONSUMO NA TELA TOKENS</h3>
+          <p className="cfg-note">Para ler o consumo, o provedor exige uma chave de administração (diferente da chave comum e só para contas de organização).</p>
+          <div className="cfg-row">
+            <Field label={usageStatus.configured ? `Chave de administração (guardada ${usageStatus.hint ?? ""})` : "Chave de administração"}>
+              <input
+                className="px-input"
+                type="password"
+                autoComplete="off"
+                spellCheck={false}
+                value={usageInput}
+                onChange={(event) => setUsageInput(event.target.value)}
+              />
+            </Field>
+            <button className="px-btn px-btn-primary" type="button" disabled={usageInput.trim() === ""} onClick={saveUsageKey}>
+              GUARDAR
+            </button>
+            {usageStatus.configured ? (
+              <button className="px-btn" type="button" onClick={clearUsageKey}>
+                APAGAR
+              </button>
+            ) : null}
+          </div>
+          <div className="cfg-row">
+            <Field label="Limite mensal de tokens (0 = sem limite)">
+              <input
+                className="px-input"
+                type="number"
+                min={0}
+                value={limit}
+                onChange={(event) => onLimit(Math.max(0, Math.floor(Number(event.target.value) || 0)))}
+              />
+            </Field>
+          </div>
+        </>
+      ) : null}
       {error ? <p className="cfg-note">ERRO: {error}</p> : null}
     </div>
   );
@@ -217,6 +279,8 @@ export function ProvidersModule({
           id={provider.id}
           label={provider.label}
           enabled={config.usage.providers[provider.id]?.enabled ?? false}
+          limit={config.usage.limits[provider.id] ?? 0}
+          onLimit={(value) => setConfig({ ...config, usage: { ...config.usage, limits: { ...config.usage.limits, [provider.id]: value } } })}
           onRemove={builtinIds.includes(provider.id) ? undefined : () => removeCustom(provider.id)}
           onEnabled={(value) =>
             setConfig({ ...config, usage: { ...config.usage, providers: { ...config.usage.providers, [provider.id]: { enabled: value } } } })

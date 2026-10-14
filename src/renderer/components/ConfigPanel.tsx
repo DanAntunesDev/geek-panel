@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import type { AppConfig, ClockStyle, ManualMode } from "../../shared/types.js";
+import { AgendaModule } from "./config/AgendaModule.js";
+import { DeviceModule } from "./config/DeviceModule.js";
 import { MediaModule } from "./config/MediaModule.js";
 import { ProvidersModule } from "./config/ProvidersModule.js";
 import { Check, Divider, Field, Module, Segmented } from "./config/ui.js";
@@ -64,19 +66,7 @@ export function ConfigPanel() {
     <div className="cfg">
       <div className="cfg-inner">
         <Module title="DISPLAY REMOTO">
-          <div className="cfg-row">
-            <Field label="Endereço (host)">
-              <input className="px-input" value={config.device.host} onChange={(event) => update({ ...config, device: { ...config.device, host: event.target.value } })} />
-            </Field>
-            <Field label="Porta">
-              <input
-                className="px-input"
-                type="number"
-                value={config.device.port}
-                onChange={(event) => update({ ...config, device: { ...config.device, port: Number(event.target.value) } })}
-              />
-            </Field>
-          </div>
+          <DeviceModule config={config} setConfig={update} persist={() => persist()} />
         </Module>
 
         <Divider />
@@ -146,6 +136,12 @@ export function ConfigPanel() {
           <Check checked={config.clock.hour12} onChange={(value) => update({ ...config, clock: { ...config.clock, hour12: value } })}>
             Formato de 12 horas (AM/PM)
           </Check>
+        </Module>
+
+        <Divider />
+
+        <Module title="AGENDA">
+          <AgendaModule config={config} setConfig={update} persist={() => persist()} />
         </Module>
 
         <Divider />
