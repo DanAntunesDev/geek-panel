@@ -19,6 +19,7 @@ interface SpotifyItem {
 interface SpotifyPlayer {
   is_playing?: boolean;
   progress_ms?: number;
+  device?: { volume_percent?: number | null };
   item?: SpotifyItem | null;
 }
 
@@ -35,6 +36,7 @@ export function toMedia(player: SpotifyPlayer): MediaState | null {
     status: player.is_playing ? "Playing" : "Paused",
     positionSeconds: Math.floor((player.progress_ms ?? 0) / 1000),
     durationSeconds: Math.floor((item.duration_ms ?? 0) / 1000),
+    volume: typeof player.device?.volume_percent === "number" ? player.device.volume_percent / 100 : null,
     canPlay: true,
     canPause: true,
     canNext: true,
@@ -81,6 +83,8 @@ export class SpotifyPlayback implements PlaybackSource {
       await this.send("POST", "/me/player/next");
     } else if (command.type === "previous") {
       await this.send("POST", "/me/player/previous");
+    } else if (command.type === "volume") {
+      await this.send("PUT", `/me/player/volume?volume_percent=${Math.round(command.level * 100)}`);
     } else {
       const target = command.type === "seekBy" ? (this.last?.positionSeconds ?? 0) + command.seconds : command.seconds;
       const duration = this.last?.durationSeconds ?? Infinity;

@@ -15,6 +15,8 @@ export interface MediaState {
   status: PlaybackStatus;
   positionSeconds: number;
   durationSeconds: number;
+  // 0 a 1; null quando o player não deixa mexer no volume
+  volume?: number | null;
   canPlay: boolean;
   canPause: boolean;
   canNext: boolean;
@@ -236,4 +238,5 @@ export type PlayerCommand =
   | { type: "next" }
   | { type: "previous" }
   | { type: "seekBy"; seconds: number }
-  | { type: "seekTo"; seconds: number };
+  | { type: "seekTo"; seconds: number }
+  | { type: "volume"; level: number };

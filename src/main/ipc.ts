@@ -41,6 +41,9 @@ function parseCommand(value: unknown): PlayerCommand {
   if ((command?.type === "seekBy" || command?.type === "seekTo") && typeof command.seconds === "number" && Number.isFinite(command.seconds)) {
     return { type: command.type, seconds: command.seconds };
   }
+  if (command?.type === "volume" && typeof (value as { level?: unknown }).level === "number" && Number.isFinite((value as { level: number }).level)) {
+    return { type: "volume", level: Math.min(1, Math.max(0, (value as { level: number }).level)) };
+  }
   throw new Error("comando inválido");
 }
 

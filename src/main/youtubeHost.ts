@@ -25,10 +25,11 @@ window.__yt = {
     const list = player.getPlaylist ? player.getPlaylist() : null;
     return { ready: true, error, status: player.getPlayerState(), position: player.getCurrentTime(),
       duration: player.getDuration(), title: data.title || "", author: data.author || "",
-      index: player.getPlaylistIndex(), count: list ? list.length : 0 };
+      volume: player.getVolume(), index: player.getPlaylistIndex(), count: list ? list.length : 0 };
   },
   playPause() { player.getPlayerState() === 1 ? player.pauseVideo() : player.playVideo(); },
   seekTo(seconds) { player.seekTo(seconds, true); },
+  setVolume(percent) { if (percent > 0) player.unMute(); player.setVolume(percent); },
   next() { player.nextVideo(); },
   previous() {
     if (player.getPlaylistIndex() > 0 && player.getCurrentTime() < 3) player.previousVideo();

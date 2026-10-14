@@ -19,6 +19,7 @@ interface PageState {
   status?: number;
   position?: number;
   duration?: number;
+  volume?: number;
   title?: string;
   author?: string;
 }
@@ -41,6 +42,7 @@ function toMedia(state: PageState): MediaState | null {
     status,
     positionSeconds: Math.floor(state.position ?? 0),
     durationSeconds: Math.floor(state.duration ?? 0),
+    volume: typeof state.volume === "number" ? state.volume / 100 : null,
     canPlay: true,
     canPause: true,
     canNext: true,
@@ -87,6 +89,7 @@ export class YouTubePlayback implements PlaybackSource {
       previous: "window.__yt.previous()",
       seekBy: `window.__yt.seekTo(${Math.max(0, position + (command.type === "seekBy" ? command.seconds : 0))})`,
       seekTo: `window.__yt.seekTo(${Math.max(0, command.type === "seekTo" ? command.seconds : 0)})`,
+      volume: `window.__yt.setVolume(${Math.round((command.type === "volume" ? command.level : 0) * 100)})`,
     };
     await this.page.run(calls[command.type]);
   }

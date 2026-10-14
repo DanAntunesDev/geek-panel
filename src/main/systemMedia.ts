@@ -11,6 +11,7 @@ interface RawPlayerProps {
   status?: unknown;
   metadata?: Record<string, unknown>;
   positionMicros?: unknown;
+  volume?: unknown;
   canControl?: unknown;
   canGoNext?: unknown;
   canGoPrevious?: unknown;
@@ -38,6 +39,7 @@ export function toMediaState(props: RawPlayerProps, now = new Date()): MediaStat
     status,
     positionSeconds: Math.max(0, Math.floor(asNumber(props.positionMicros) / 1_000_000)),
     durationSeconds: Math.max(0, Math.floor(asNumber(metadata["mpris:length"]) / 1_000_000)),
+    volume: typeof props.volume === "number" ? props.volume : null,
     canPlay: props.canControl !== false,
     canPause: props.canControl !== false,
     canNext: props.canGoNext !== false,
@@ -74,6 +76,12 @@ function unwrapMetadata(raw: unknown): Record<string, unknown> {
   return metadata;
 }
 
+// em CommonJS a API vem em .default
+async function loadDbus(): Promise<typeof import("dbus-next")> {
+  const loaded = (await import("dbus-next")) as typeof import("dbus-next") & { default?: typeof import("dbus-next") };
+  return "sessionBus" in loaded && typeof loaded.sessionBus === "function" ? loaded : (loaded.default as typeof import("dbus-next"));
+}
+
 export class SystemMediaReader {
   private bus: import("dbus-next").MessageBus | null = null;
   private active: string | null = null;
@@ -102,7 +110,11 @@ export class SystemMediaReader {
     if (command.type === "playPause") await player.PlayPause();
     else if (command.type === "next") await player.Next();
     else if (command.type === "previous") await player.Previous();
-    else {
+    else if (command.type === "volume") {
+      const props = proxy.getInterface("org.freedesktop.DBus.Properties") as unknown as { Set(iface: string, name: string, value: unknown): Promise<void> };
+      const { Variant } = await loadDbus();
+      await props.Set(PLAYER_IFACE, "Volume", new Variant("d", command.level));
+    } else {
       const seconds = command.type === "seekBy" ? command.seconds : command.seconds - this.lastPosition;
       await player.Seek(BigInt(Math.round(seconds * 1_000_000)));
     }
@@ -113,9 +125,7 @@ export class SystemMediaReader {
     this.bus = null;
   }
   private async listPlayers(): Promise<{ name: string; identity: string; media: MediaState }[]> {
-    // em CommonJS a API vem em .default
-    const loaded = (await import("dbus-next")) as typeof import("dbus-next") & { default?: typeof import("dbus-next") };
-    const dbus = "sessionBus" in loaded && typeof loaded.sessionBus === "function" ? loaded : (loaded.default as typeof import("dbus-next"));
+    const dbus = await loadDbus();
     this.bus ??= dbus.sessionBus();
     const bus = this.bus;
     const daemon = await bus.getProxyObject("org.freedesktop.DBus", "/org/freedesktop/DBus");
@@ -142,6 +152,7 @@ export class SystemMediaReader {
             status: unwrap(all.PlaybackStatus),
             metadata: unwrapMetadata(all.Metadata),
             positionMicros: unwrap(position),
+            volume: unwrap(all.Volume),
             canControl: unwrap(all.CanControl),
             canGoNext: unwrap(all.CanGoNext),
             canGoPrevious: unwrap(all.CanGoPrevious),
