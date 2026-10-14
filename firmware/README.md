@@ -1,0 +1,47 @@
+# Firmware do aparelho
+
+Firmware para o GeekMagic SmallTV-Ultra (ESP8266, 4 MB, display ST7789 240x240). O aparelho não desenha nada sozinho: o app no PC desenha as telas e manda os quadros pelo Wi-Fi, e ele só exibe, em 2x (cada pixel de 120x120 vira 2x2).
+
+Ainda não foi testado no aparelho. Os pinos e as opções do display (inverter cores, luz) vêm de projetos da comunidade para a mesma placa, por isso dá para ajustar tudo pela página do aparelho.
+
+## Como ele acha o PC
+
+1. Liga, entra no Wi-Fi que já estava salvo nele. Se não conseguir em 25 s, abre a rede `GeekPanel` com uma página de configuração (`192.168.4.1`).
+2. Manda um UDP em broadcast (porta 4602). O app responde com a porta TCP.
+3. Conecta, manda o código de pareamento e passa a receber os quadros.
+
+Enquanto não acha o app, mostra uma tela de espera animada (conectando, procurando, configurar Wi-Fi, código errado). Essas telas vêm de `art/waitingScene.ts`.
+
+A página do aparelho (`http://IP-DELE/`) tem Wi-Fi, IP do PC (opcional), código de pareamento, brilho, rotação e um padrão de teste. Com o código definido, as ações e o `/update` pedem usuário `admin` e esse código.
+
+## Compilar
+
+```
+pip install platformio
+cd firmware
+pio run -e firmware    # painel completo
+pio run -e loader      # carregador mínimo (só Wi-Fi, página e atualização)
+```
+
+O binário sai em `.pio/build/<env>/firmware.bin`. Para refazer as telas de espera:
+
+```
+CHROME_PATH=<chromium> node firmware/tools/gen-waiting.mjs
+```
+
+O leitor de mensagens (`src/parser.cpp`) é testado no computador contra os bytes que o app gera: `yarn test` (precisa de `g++`).
+
+## Gravar
+
+O firmware de fábrica aceita atualização pela página `/update` do aparelho. Antes de gravar, guarde o firmware oficial para poder voltar (a pasta `recovery/` não vai para o git):
+
+1. Baixe `FW-Smalltv-Ultra-V9.0.50.zip` de [GeekMagicClock/smalltv-ultra](https://github.com/GeekMagicClock/smalltv-ultra) e confira o MD5 do `.bin` com o `md5sum.txt`.
+2. Abra `http://IP-DO-APARELHO/update`, escolha o `firmware.bin` e envie. Não desligue até reiniciar.
+3. Se o aparelho recusar com "Not Enough Space", nada foi gravado: envie antes o `loader`, depois o `firmware`.
+4. Se o Wi-Fi salvo não funcionar, entre na rede `GeekPanel` e configure.
+
+Para voltar ao original: envie o `.bin` oficial em `/update` (ou `http://192.168.4.1/update` na rede `GeekPanel`).
+
+## Protocolo
+
+Está descrito em `src/shared/deviceProtocol.ts` (app) e `src/protocol.h` (aqui). Mensagens `[tipo u8][tamanho u16][corpo]`; quadro em RLE, pares `[repetições][índice da paleta]`.
