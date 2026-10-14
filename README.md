@@ -17,8 +17,10 @@ Painel em pixel art para o meu GeekMagic SmallTV: um toca-discos que mostra o qu
 
 ```
 yarn
-yarn dev      # abre a janela
-yarn build    # compila e empacota em release/
+yarn dev      # abre a janela, com recarga ao editar
+yarn start    # compila e abre o app
+yarn build    # compila e empacota em release/ (sem instalador)
+yarn dist     # gera o instalador do sistema atual
 yarn test
 ```
 
@@ -36,12 +38,26 @@ O painel só aparece no aparelho com o computador e o app ligados. Em Config dá
 
 ## Windows
 
-O app é feito para rodar igual no Linux e no Windows. O que muda:
+O app roda igual no Linux e no Windows. Ainda não testei no Windows, então o primeiro teste lá é o que falta.
 
-- A conexão com o aparelho abre as portas 4601 (TCP) e 4602 (UDP). No Windows, na primeira vez, o Firewall pergunta; libere para redes privadas.
+**Instalador:** a cada tag `v*` (ou rodando o workflow `release` à mão na aba Actions) o GitHub compila no Windows e gera o instalador (`geek-panel-<versão>-win.exe`) e uma versão portátil, que abre sem instalar. Os arquivos saem em Actions > release > Artifacts, ou em Releases quando for uma tag. Não são assinados, então o Windows avisa "editor desconhecido" na primeira vez.
+
+**Direto pelo terminal**, sem VS Code. Precisa só do [Node.js](https://nodejs.org) 20 ou mais novo:
+
+```
+git clone https://github.com/DanAntunesDev/geek-panel
+cd geek-panel
+powershell -ExecutionPolicy Bypass -File scripts\windows.ps1             # instala o que falta e abre o app
+powershell -ExecutionPolicy Bypass -File scripts\windows.ps1 -Installer  # gera o instalador em release\
+```
+
+Ou, com Node e Yarn já instalados: `yarn` e depois `yarn start` (abre o app) ou `yarn dist:win` (gera o instalador).
+
+O que muda no Windows:
+
+- A conexão com o aparelho abre as portas 4601 (TCP) e 4602 (UDP). Na primeira vez o Firewall pergunta; libere para redes privadas.
 - Segredos e logins ficam no cofre de cada sistema (libsecret no Linux, DPAPI no Windows), então não passam de um sistema para o outro: no Windows é preciso conectar de novo.
 - Ler o que está tocando nos players do computador só funciona no Linux por enquanto. Spotify e YouTube funcionam nos dois.
-- O instalador do Windows ainda não foi gerado nem testado.
 
 ## Segurança
 
@@ -54,4 +70,4 @@ O app é feito para rodar igual no Linux e no Windows. O que muda:
 ## Notas
 
 - A paleta tem 4 cores fixas, o destaque com a sombra dele e mais 8 cores opcionais (tokens e relógio).
-- Feito no Linux. No Windows ainda não testei.
+- Feito e testado no Linux.
