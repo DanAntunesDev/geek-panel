@@ -3,7 +3,7 @@ import { REFRESH_FRAMES } from "../pixel/icons.js";
 import { PALETTE, SPRITE_COLORS } from "../pixel/palette.js";
 import type { PixelGrid } from "../pixel/PixelCanvas.js";
 import { SCENE_SIZE } from "../pixel/scale.js";
-import { panel, segmentedBar, textRight, titleBand, truncate, wrap } from "../pixel/ui.js";
+import { panel, segmentedBar, textCenter, textRight, titleBand, truncate, wrap } from "../pixel/ui.js";
 import type { UsageCard } from "../../shared/types.js";
 
 const BAND = 16;
@@ -74,7 +74,7 @@ export function drawUsage(ctx: Ctx, view: UsageView): void {
   titleBand(ctx, SCENE_SIZE, "TOKENS", BAND);
 
   panel(ctx, REFRESH_BOX.x, REFRESH_BOX.y, REFRESH_BOX.w, REFRESH_BOX.h, view.spinning);
-  sprite(ctx, REFRESH_FRAMES[view.spinning ? (view.frame >> 1) % 4 : 0], SPRITE_COLORS, REFRESH_BOX.x + 2, REFRESH_BOX.y + 2);
+  sprite(ctx, REFRESH_FRAMES[view.spinning ? (view.frame >> 1) % 4 : 0], SPRITE_COLORS, REFRESH_BOX.x + 3, REFRESH_BOX.y + 3);
 
   const pages = Math.max(1, Math.ceil(view.cards.length / CARDS_PER_PAGE));
   const page = Math.floor(view.frame / PAGE_FRAMES) % pages;
@@ -87,8 +87,8 @@ export function drawUsage(ctx: Ctx, view: UsageView): void {
   });
   if (view.cards.length === 0) {
     panel(ctx, 4, 24, 112, 60);
-    drawText(ctx, "SEM PROVEDOR", 12, 46, PALETTE.ink);
-    drawText(ctx, "ative na Config", 12, 58, PALETTE.mid);
+    textCenter(ctx, "SEM PROVEDOR", 60, 42, PALETTE.ink);
+    wrap("Ative na Config", 12).forEach((line, index) => textCenter(ctx, line, 60, 56 + index * 10, PALETTE.mid));
   }
 
   if (view.updatedAtLabel) drawText(ctx, `SYNC ${view.updatedAtLabel}`, 4, 109, PALETTE.mid);
