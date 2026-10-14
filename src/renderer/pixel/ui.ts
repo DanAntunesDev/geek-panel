@@ -1,4 +1,4 @@
-import { disc, drawMask, maskInkWidth, rect, ring, textMask, type Ctx } from "./draw.js";
+import { disc, drawMask, maskInkWidth, rect, textMask, type Ctx } from "./draw.js";
 import { PALETTE } from "./palette.js";
 
 export function panel(ctx: Ctx, x: number, y: number, w: number, h: number, pressed = false): void {
@@ -32,10 +32,10 @@ export function chamfer(ctx: Ctx, x: number, y: number, w: number, h: number, co
   }
 }
 
-export function titleBand(ctx: Ctx, width: number, title: string): void {
-  rect(ctx, 0, 0, width, 14, PALETTE.ink);
-  rect(ctx, 0, 14, width, 1, PALETTE.mid);
-  drawMask(ctx, textMask(title), 6, 3, PALETTE.bg);
+export function titleBand(ctx: Ctx, width: number, title: string, height = 14): void {
+  rect(ctx, 0, 0, width, height, PALETTE.ink);
+  rect(ctx, 0, height, width, 1, PALETTE.mid);
+  drawMask(ctx, textMask(title), 4, Math.floor((height - 8) / 2), PALETTE.bg);
 }
 
 export function textRight(ctx: Ctx, text: string, rightX: number, y: number, color: string): void {
@@ -65,18 +65,6 @@ export function led(ctx: Ctx, cx: number, cy: number, on: boolean): void {
   disc(ctx, cx, cy, 1, on ? PALETTE.bg : PALETTE.mid);
 }
 
-export function refreshSpinner(ctx: Ctx, cx: number, cy: number, step: number, color: string): void {
-  const gapCenter = (step % 4) / 4;
-  ring(ctx, cx, cy, 3, 4, color, (turn) => {
-    const diff = Math.abs(turn - gapCenter);
-    return Math.min(diff, 1 - diff) > 0.12;
-  });
-  const headAngle = (gapCenter + 0.12) * Math.PI * 2;
-  const hx = cx + Math.round(Math.sin(headAngle) * 4);
-  const hy = cy - Math.round(Math.cos(headAngle) * 4);
-  rect(ctx, hx - 1, hy - 1, 3, 3, color);
-}
-
 export function wrap(text: string, maxChars: number): string[] {
   const lines: string[] = [];
   let current = "";
@@ -94,5 +82,5 @@ export function wrap(text: string, maxChars: number): string[] {
 }
 
 export function truncate(text: string, maxChars: number): string {
-  return text.length <= maxChars ? text : `${text.slice(0, Math.max(0, maxChars - 1))}.`;
+  return text.slice(0, maxChars).trimEnd();
 }

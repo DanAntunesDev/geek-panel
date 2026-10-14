@@ -1,11 +1,12 @@
 import { PALETTE } from "../pixel/palette.js";
 
-export type TabKey = "player" | "usage" | "clock" | "config";
+export type TabKey = "player" | "usage" | "clock" | "agenda" | "config";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "player", label: "Player" },
   { key: "usage", label: "Tokens" },
   { key: "clock", label: "Relógio" },
+  { key: "agenda", label: "Agenda" },
   { key: "config", label: "Config" },
 ];
 
