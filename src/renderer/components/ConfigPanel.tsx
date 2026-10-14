@@ -1,8 +1,32 @@
 import { useEffect, useState } from "react";
-import type { AppConfig } from "../../shared/types.js";
+import type { AppConfig, ClockStyle, ManualMode } from "../../shared/types.js";
+import { MediaModule } from "./config/MediaModule.js";
+import { ProvidersModule } from "./config/ProvidersModule.js";
+import { Check, Divider, Field, Module, Segmented } from "./config/ui.js";
 
-// Editor visual da configuração (seção 11 da spec). Campos de host/porta
-// são realmente editáveis e validados pelo processo principal ao salvar.
+const ROTATION_MODES: { value: ManualMode; label: string }[] = [
+  { value: "automatic", label: "AUTO" },
+  { value: "player", label: "PLAYER" },
+  { value: "usage", label: "TOKENS" },
+  { value: "clock", label: "RELÓGIO" },
+  { value: "network", label: "REDE" },
+];
+
+const CLOCK_STYLES: { value: ClockStyle; label: string }[] = [
+  { value: "digital", label: "DIGITAL" },
+  { value: "analog", label: "ANALÓGICO" },
+  { value: "flip", label: "FLIP" },
+];
+
+type RotationKey = "playerSeconds" | "usageSeconds" | "clockSeconds" | "networkSeconds";
+
+const ROTATION_FIELDS: { key: RotationKey; label: string }[] = [
+  { key: "playerSeconds", label: "Player (s)" },
+  { key: "usageSeconds", label: "Tokens (s)" },
+  { key: "clockSeconds", label: "Relógio (s)" },
+  { key: "networkSeconds", label: "Rede (s)" },
+];
+
 export function ConfigPanel() {
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [status, setStatus] = useState<{ address: string; port: number } | null>(null);
@@ -14,122 +38,136 @@ export function ConfigPanel() {
     window.painelApi.getServerStatus().then(setStatus);
   }, []);
 
-  if (!config) {
-    return <p style={{ padding: 16 }}>Carregando configuração…</p>;
+  if (!config) return <p className="cfg">Carregando configuração…</p>;
+
+  const update = (next: AppConfig) => {
+    setConfig(next);
+    setSaved(false);
+  };
+
+  async function persist(next: AppConfig = config!) {
+    setConfig(await window.painelApi.saveConfig(next));
   }
 
   async function handleSave() {
-    if (!config) return;
     setError(null);
     setSaved(false);
     try {
-      const result = await window.painelApi.saveConfig(config);
-      setConfig(result);
+      await persist();
       setSaved(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "erro desconhecido");
+      setError((err instanceof Error ? err.message : "erro desconhecido").replace(/^Error invoking remote method '[^']+': (Error: )?/, ""));
     }
   }
 
   return (
-    <section style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
-      <h2 style={{ fontSize: 14, margin: 0 }}>Configuração</h2>
+    <div className="cfg">
+      <div className="cfg-inner">
+        <Module title="DISPLAY REMOTO">
+          <div className="cfg-row">
+            <Field label="Endereço (host)">
+              <input className="px-input" value={config.device.host} onChange={(event) => update({ ...config, device: { ...config.device, host: event.target.value } })} />
+            </Field>
+            <Field label="Porta">
+              <input
+                className="px-input"
+                type="number"
+                value={config.device.port}
+                onChange={(event) => update({ ...config, device: { ...config.device, port: Number(event.target.value) } })}
+              />
+            </Field>
+          </div>
+        </Module>
 
-      <label>
-        Host do display
-        <input
-          value={config.device.host}
-          onChange={(event) => setConfig({ ...config, device: { ...config.device, host: event.target.value } })}
-          style={{ width: "100%" }}
-        />
-      </label>
+        <Divider />
 
-      <label>
-        Porta do display
-        <input
-          type="number"
-          value={config.device.port}
-          onChange={(event) =>
-            setConfig({ ...config, device: { ...config.device, port: Number(event.target.value) } })
-          }
-          style={{ width: "100%" }}
-        />
-      </label>
+        <Module title="SERVIDOR LOCAL">
+          <Check checked={config.server.lanMode} onChange={(value) => update({ ...config, server: { ...config.server, lanMode: value } })}>
+            Aceitar conexões de outros aparelhos da rede (modo LAN)
+          </Check>
+          {config.server.lanMode ? (
+            <div className="cfg-row">
+              <Field label="Interface de rede">
+                <input
+                  className="px-input"
+                  value={config.server.lanInterface ?? ""}
+                  onChange={(event) => update({ ...config, server: { ...config.server, lanInterface: event.target.value || null } })}
+                />
+              </Field>
+            </div>
+          ) : null}
+          {status ? <p className="cfg-note">Ativo em {status.address}:{status.port}</p> : null}
+        </Module>
 
-      <fieldset>
-        <legend>Rotação (segundos)</legend>
-        <label>
-          Player
-          <input
-            type="number"
-            value={config.rotation.playerSeconds}
-            onChange={(event) =>
-              setConfig({ ...config, rotation: { ...config.rotation, playerSeconds: Number(event.target.value) } })
-            }
+        <Divider />
+
+        <Module title="ROTAÇÃO DAS TELAS">
+          <Segmented
+            label="Modo"
+            value={config.rotation.mode}
+            options={ROTATION_MODES}
+            onChange={(mode) => update({ ...config, rotation: { ...config.rotation, mode } })}
           />
-        </label>
-        <label>
-          Uso
-          <input
-            type="number"
-            value={config.rotation.usageSeconds}
-            onChange={(event) =>
-              setConfig({ ...config, rotation: { ...config.rotation, usageSeconds: Number(event.target.value) } })
-            }
+          <h3 className="cfg-sub">TEMPO EM CADA TELA</h3>
+          <div className="cfg-row">
+            {ROTATION_FIELDS.map((field) => (
+              <Field key={field.key} label={field.label}>
+                <input
+                  className="px-input"
+                  type="number"
+                  value={config.rotation[field.key]}
+                  onChange={(event) => update({ ...config, rotation: { ...config.rotation, [field.key]: Number(event.target.value) } })}
+                />
+              </Field>
+            ))}
+          </div>
+        </Module>
+
+        <Divider />
+
+        <Module title="RELÓGIO">
+          <Segmented
+            label="Estilo"
+            value={config.clock.style}
+            options={CLOCK_STYLES}
+            onChange={(style) => update({ ...config, clock: { ...config.clock, style } })}
           />
-        </label>
-        <label>
-          Relógio
-          <input
-            type="number"
-            value={config.rotation.clockSeconds}
-            onChange={(event) =>
-              setConfig({ ...config, rotation: { ...config.rotation, clockSeconds: Number(event.target.value) } })
-            }
-          />
-        </label>
-      </fieldset>
+          <div className="cfg-row" style={{ marginTop: 12 }}>
+            <Field label="Fuso horário">
+              <input className="px-input" value={config.clock.timezone} onChange={(event) => update({ ...config, clock: { ...config.clock, timezone: event.target.value } })} />
+            </Field>
+          </div>
+          <Check checked={config.clock.showDate} onChange={(value) => update({ ...config, clock: { ...config.clock, showDate: value } })}>
+            Mostrar data e dia da semana
+          </Check>
+          <Check checked={config.clock.showSeconds} onChange={(value) => update({ ...config, clock: { ...config.clock, showSeconds: value } })}>
+            Mostrar segundos
+          </Check>
+          <Check checked={config.clock.hour12} onChange={(value) => update({ ...config, clock: { ...config.clock, hour12: value } })}>
+            Formato de 12 horas (AM/PM)
+          </Check>
+        </Module>
 
-      <label>
-        Fuso horário
-        <input
-          value={config.clock.timezone}
-          onChange={(event) => setConfig({ ...config, clock: { ...config.clock, timezone: event.target.value } })}
-          style={{ width: "100%" }}
-        />
-      </label>
+        <Divider />
 
-      <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <input
-          type="checkbox"
-          checked={config.server.lanMode}
-          onChange={(event) => setConfig({ ...config, server: { ...config.server, lanMode: event.target.checked } })}
-        />
-        Habilitar modo LAN (o servidor fica acessível a outros dispositivos da rede)
-      </label>
+        <Module title="MÚSICA E VÍDEO">
+          <MediaModule config={config} setConfig={update} persist={() => persist()} />
+        </Module>
 
-      {config.server.lanMode ? (
-        <label>
-          Interface de rede
-          <input
-            value={config.server.lanInterface ?? ""}
-            onChange={(event) =>
-              setConfig({ ...config, server: { ...config.server, lanInterface: event.target.value || null } })
-            }
-            style={{ width: "100%" }}
-          />
-        </label>
-      ) : null}
+        <Divider />
 
-      <button onClick={handleSave}>Salvar</button>
-      {saved ? <p style={{ color: "green", fontSize: 12 }}>Configuração salva.</p> : null}
-      {error ? <p style={{ color: "crimson", fontSize: 12 }}>{error}</p> : null}
+        <Module title="PROVEDORES DE TOKENS">
+          <ProvidersModule config={config} setConfig={update} persist={persist} />
+        </Module>
 
-      {status ? (
-        <p style={{ fontSize: 12, opacity: 0.7 }}>
-          Servidor local ativo em {status.address}:{status.port}
-        </p>
-      ) : null}
-    </section>
+        <Divider />
+
+        <button className="px-btn px-btn-primary" type="button" onClick={handleSave}>
+          SALVAR CONFIGURAÇÃO
+        </button>
+        {saved ? <p className="cfg-note">OK: configuração salva.</p> : null}
+        {error ? <p className="cfg-note">ERRO: {error}</p> : null}
+      </div>
+    </div>
   );
 }
