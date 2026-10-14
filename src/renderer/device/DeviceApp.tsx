@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { themePalette } from "../../shared/theme.js";
 import type { DeviceState } from "../../shared/types.js";
 import { FrameTapContext } from "../pixel/FrameTap.js";
 import { SCENE_SIZE } from "../pixel/scale.js";
@@ -6,11 +7,14 @@ import { AgendaScreen } from "../screens/AgendaScreen.js";
 import { ClockScreen } from "../screens/ClockScreen.js";
 import { PlayerScreen } from "../screens/PlayerScreen.js";
 import { UsageScreen } from "../screens/UsageScreen.js";
-import { toIndexed } from "./indexed.js";
+import { useTheme } from "../state/useTheme.js";
+import { setIndexPalette, toIndexed } from "./indexed.js";
 
 // Janela oculta que desenha a tela do aparelho e manda cada quadro para o PC enviar.
 export function DeviceApp() {
   const [state, setState] = useState<DeviceState>({ active: false, screen: "clock" });
+
+  useTheme((accent) => setIndexPalette(themePalette(accent)));
 
   useEffect(() => {
     window.painelApi.getDeviceState().then(setState);

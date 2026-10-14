@@ -3,6 +3,7 @@ import type { AppConfig, ClockStyle, ManualMode } from "../../shared/types.js";
 import { AgendaModule } from "./config/AgendaModule.js";
 import { DeviceModule } from "./config/DeviceModule.js";
 import { MediaModule } from "./config/MediaModule.js";
+import { ThemeModule } from "./config/ThemeModule.js";
 import { ProvidersModule } from "./config/ProvidersModule.js";
 import { Check, Divider, Field, Module, Segmented } from "./config/ui.js";
 
@@ -67,6 +68,12 @@ export function ConfigPanel() {
       <div className="cfg-inner">
         <Module title="DISPLAY REMOTO">
           <DeviceModule config={config} setConfig={update} persist={() => persist()} />
+        </Module>
+
+        <Divider />
+
+        <Module title="APARÊNCIA">
+          <ThemeModule config={config} setConfig={update} />
         </Module>
 
         <Divider />

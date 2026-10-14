@@ -1,5 +1,7 @@
 // Paleta fechada: não adicionar cores
 
+import { shadeOf } from "../../shared/theme.js";
+
 export const PALETTE = {
   bg: "#F7F6F3",
   surface: "#D9D7D2",
@@ -10,7 +12,7 @@ export const PALETTE = {
   accent: "#E8368F",
   // accent escurecido
   accentShade: "#A5276A",
-} as const;
+};
 
 export type PaletteKey = keyof typeof PALETTE;
 
@@ -22,6 +24,17 @@ export const SPRITE_COLORS = {
   A: PALETTE.accent,
   B: PALETTE.accentShade,
   ".": null,
-} as const;
+} as Record<string, string | null>;
 
-export const PALETTE_VALUES: readonly string[] = Object.values(PALETTE);
+// Troca o magenta; as cenas leem a paleta a cada quadro, então pegam na hora.
+export function applyAccent(accent: string): void {
+  PALETTE.accent = accent;
+  PALETTE.accentShade = shadeOf(accent);
+  SPRITE_COLORS.A = PALETTE.accent;
+  SPRITE_COLORS.B = PALETTE.accentShade;
+  PALETTE_VALUES.splice(0, PALETTE_VALUES.length, ...Object.values(PALETTE));
+  document.documentElement.style.setProperty("--accent", PALETTE.accent);
+  document.documentElement.style.setProperty("--accent-shade", PALETTE.accentShade);
+}
+
+export const PALETTE_VALUES: string[] = Object.values(PALETTE);

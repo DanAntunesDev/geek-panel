@@ -1,16 +1,23 @@
 import { DEVICE_PALETTE } from "../../shared/deviceConstants.js";
 
-const PALETTE_RGB = DEVICE_PALETTE.map((hex) => {
-  const value = Number.parseInt(hex.slice(1), 16);
-  return [(value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff] as const;
-});
+let paletteRgb: (readonly [number, number, number])[] = [];
+let lookup = new Map<number, number>();
 
-const lookup = new Map<number, number>(PALETTE_RGB.map(([r, g, b], index) => [(r << 16) | (g << 8) | b, index]));
+// Muda a paleta de destino (cor de destaque nova) e esquece o cache de cores.
+export function setIndexPalette(palette: readonly string[]): void {
+  paletteRgb = palette.map((hex) => {
+    const value = Number.parseInt(hex.slice(1), 16);
+    return [(value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff] as const;
+  });
+  lookup = new Map(paletteRgb.map(([r, g, b], index) => [(r << 16) | (g << 8) | b, index]));
+}
+
+setIndexPalette(DEVICE_PALETTE);
 
 function nearest(r: number, g: number, b: number): number {
   let best = 0;
   let bestDistance = Infinity;
-  PALETTE_RGB.forEach(([pr, pg, pb], index) => {
+  paletteRgb.forEach(([pr, pg, pb], index) => {
     const distance = (r - pr) ** 2 + (g - pg) ** 2 + (b - pb) ** 2;
     if (distance < bestDistance) {
       bestDistance = distance;
