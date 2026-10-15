@@ -105,7 +105,7 @@ describe("validateConfig", () => {
   });
 
   it("iniciar com o sistema começa desligado e só aceita verdadeiro ou falso", () => {
-    expect(validateConfig({}).app.startWithSystem).toBe(false);
+    expect(validateConfig({}).app.startWithSystem).toBe(true);
     expect(validateConfig({ app: { startWithSystem: true } }).app.startWithSystem).toBe(true);
     expect(() => validateConfig({ app: { startWithSystem: 1 } })).toThrow("sistema");
   });

@@ -98,9 +98,16 @@ export function createDeviceSystem(deps: Deps) {
     else if (link.status().running) await link.stop();
   }
 
+  // porta ocupada ou rede ainda subindo no boot: tenta de novo até abrir
+  const RETRY_MS = 10_000;
+  let retry: NodeJS.Timeout | null = null;
+
   return {
     start: async () => {
       scheduler.start();
+      retry = setInterval(() => {
+        if (config?.device.autoConnect && !link.status().running) void link.start().catch(() => undefined);
+      }, RETRY_MS);
       let initial = await deps.config();
       // primeira vez: gera o código que o aparelho vai precisar informar
       if (!initial.device.pairingCode) {
@@ -110,6 +117,7 @@ export function createDeviceSystem(deps: Deps) {
       await applyConfig(initial);
     },
     stop: async () => {
+      if (retry) clearInterval(retry);
       scheduler.stop();
       await link.stop();
       if (!window.isDestroyed()) window.destroy();

@@ -33,7 +33,7 @@ export const DEFAULT_CONFIG: AppConfig = {
   },
   theme: DEFAULT_THEME,
   app: {
-    startWithSystem: false,
+    startWithSystem: true,
   },
   agenda: {
     enabled: false,

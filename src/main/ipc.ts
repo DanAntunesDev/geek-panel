@@ -133,7 +133,7 @@ export function registerIpcHandlers(window: BrowserWindow, configStore: ConfigSt
     IPC_CHANNELS.testDevice,
     trusted(async () => {
       const { device } = await configStore.load();
-      return probeDevice(device.host, device.port);
+      return probeDevice(await deviceHost(), device.port);
     }),
   );
 
