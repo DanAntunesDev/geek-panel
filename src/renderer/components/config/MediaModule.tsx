@@ -60,7 +60,7 @@ function LinkField({
       if (!result.ok) show({ tone: "err", text: LINK_ERRORS[result.reason] });
       else if (service !== "youtubeMusic" && result.service !== service && !(service === "youtube" && result.service === "youtubeMusic")) {
         show({ tone: "err", text: "este link é de outro serviço" });
-      } else show({ tone: "ok", text: `link válido: ${result.title}${result.author ? ` — ${result.author}` : ""}` });
+      } else show({ tone: "ok", text: `link válido: ${result.title}${result.author ? ` (${result.author})` : ""}` });
     } catch (error) {
       show({ tone: "err", text: describeError(error) });
     } finally {

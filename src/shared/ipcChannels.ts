@@ -1,5 +1,5 @@
-// Nomes dos canais IPC, sem dependências de Node — importado tanto pelo
-// processo principal quanto pelo preload (que roda em contexto sandboxed).
+// Nomes dos canais IPC. Não depende de Node: o processo principal e o preload
+// (que roda em sandbox) importam este arquivo.
 
 export const IPC_CHANNELS = {
   getConfig: "config:get",

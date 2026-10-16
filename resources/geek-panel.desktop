@@ -1,9 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Painel local
-Comment=Painel de controle local para display remoto compacto
-Exec=painel-local %U
-Icon=geek-panel
-Terminal=false
-Categories=Utility;
-StartupWMClass=com.geekpanel.app
