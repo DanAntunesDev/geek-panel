@@ -4,7 +4,7 @@ import { app, BrowserWindow, Menu, safeStorage, shell } from "electron";
 import * as os from "node:os";
 import * as path from "node:path";
 import { ConfigStore } from "../config/ConfigStore.js";
-import { applyAutostart, HIDDEN_FLAG, type AutostartDeps } from "./autostart.js";
+import { applyAutostart, HIDDEN_FLAG, installLinuxLauncher, type AutostartDeps } from "./autostart.js";
 import { migrateLegacyConfig } from "./legacyConfig.js";
 import { OAuthManager } from "./oauth.js";
 import { SecretStore, type Cipher } from "./secretStore.js";
@@ -65,6 +65,7 @@ async function bootstrap(): Promise<void> {
   const config = await configStore.load();
   // mantém o sistema de acordo com a opção salva (ex.: o app foi movido de lugar)
   await applyAutostart(config.app.startWithSystem, autostartDeps()).catch(() => undefined);
+  await installLinuxLauncher(autostartDeps(), path.join(__dirname, "../../assets/pixel/icon-512.png")).catch(() => undefined);
 
   mainWindow = createMainWindow(!startHidden);
   createTray(mainWindow);

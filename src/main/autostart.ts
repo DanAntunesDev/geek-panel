@@ -15,8 +15,30 @@ export interface AutostartDeps {
 
 export const HIDDEN_FLAG = "--hidden";
 
-export function desktopEntry(exec: string): string {
-  return ["[Desktop Entry]", "Type=Application", "Name=Geek Panel", `Exec=${exec}`, "Terminal=false", "X-GNOME-Autostart-enabled=true", ""].join("\n");
+const APP_CLASS = "com.geekpanel.app";
+
+export function desktopEntry(exec: string, icon?: string): string {
+  const lines = ["[Desktop Entry]", "Type=Application", "Name=Geek Panel", `Exec=${exec}`, "Terminal=false", "X-GNOME-Autostart-enabled=true", `StartupWMClass=${APP_CLASS}`];
+  if (icon) lines.push(`Icon=${icon}`);
+  return [...lines, ""].join("\n");
+}
+
+function launcherProgram(deps: AutostartDeps): string {
+  return deps.appImage ?? `"${deps.execPath}"${deps.isPackaged ? "" : ` "${deps.appPath}"`}`;
+}
+
+// Sem um .desktop com o mesmo StartupWMClass, o GNOME mostra o ícone genérico na barra de tarefas.
+export async function installLinuxLauncher(deps: AutostartDeps, iconSource: string): Promise<void> {
+  if (deps.platform !== "linux") return;
+  const data = process.env.XDG_DATA_HOME ?? path.join(deps.home ?? os.homedir(), ".local", "share");
+  const iconTarget = path.join(data, "icons", "hicolor", "512x512", "apps", `${APP_CLASS}.png`);
+  await fs.mkdir(path.dirname(iconTarget), { recursive: true });
+  await fs.copyFile(iconSource, iconTarget);
+
+  const entry = path.join(data, "applications", `${APP_CLASS}.desktop`);
+  const text = desktopEntry(launcherProgram(deps), iconTarget).replace("Name=Geek Panel", "Name=Painel local").replace("X-GNOME-Autostart-enabled=true\n", "");
+  await fs.mkdir(path.dirname(entry), { recursive: true });
+  if ((await fs.readFile(entry, "utf-8").catch(() => "")) !== text) await fs.writeFile(entry, text, "utf-8");
 }
 
 export function linuxAutostartFile(home = os.homedir()): string {
@@ -31,9 +53,9 @@ export async function applyAutostart(enabled: boolean, deps: AutostartDeps): Pro
       await fs.rm(file, { force: true });
       return;
     }
-    const program = deps.appImage ?? `"${deps.execPath}"${deps.isPackaged ? "" : ` "${deps.appPath}"`}`;
+    const program = launcherProgram(deps);
     await fs.mkdir(path.dirname(file), { recursive: true });
-    await fs.writeFile(file, desktopEntry(`${program} ${HIDDEN_FLAG}`), "utf-8");
+    await fs.writeFile(file, desktopEntry(`${program} ${HIDDEN_FLAG}`, APP_CLASS), "utf-8");
     return;
   }
   // em desenvolvimento o executável seria o do Electron solto: não registra

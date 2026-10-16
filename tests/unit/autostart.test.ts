@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { applyAutostart, desktopEntry, type AutostartDeps } from "../../src/main/autostart.js";
+import { applyAutostart, desktopEntry, installLinuxLauncher, type AutostartDeps } from "../../src/main/autostart.js";
 import { migrateLegacyConfig } from "../../src/main/legacyConfig.js";
 
 let home: string;
@@ -39,6 +39,27 @@ describe("applyAutostart (Linux)", () => {
 
   it("desligar sem arquivo não dá erro", async () => {
     await expect(applyAutostart(false, linux())).resolves.toBeUndefined();
+  });
+});
+
+describe("installLinuxLauncher", () => {
+  it("grava o atalho do app com ícone e classe da janela, sem abrir escondido", async () => {
+    vi.stubEnv("XDG_DATA_HOME", path.join(home, "data"));
+    const icon = path.join(home, "icon.png");
+    await fs.writeFile(icon, "png");
+    await installLinuxLauncher(linux(), icon);
+
+    const text = await fs.readFile(path.join(home, "data", "applications", "com.geekpanel.app.desktop"), "utf-8");
+    expect(text).toContain("Name=Painel local");
+    expect(text).toContain('Exec="/opt/geek-panel/geek-panel"\n');
+    expect(text).toContain("StartupWMClass=com.geekpanel.app");
+    expect(text).toContain(`Icon=${path.join(home, "data", "icons", "hicolor", "512x512", "apps", "com.geekpanel.app.png")}`);
+    expect(text).not.toContain("--hidden");
+    expect(await fs.readFile(path.join(home, "data", "icons", "hicolor", "512x512", "apps", "com.geekpanel.app.png"), "utf-8")).toBe("png");
+  });
+
+  it("não faz nada fora do Linux", async () => {
+    await expect(installLinuxLauncher({ platform: "win32", isPackaged: true, execPath: "", appPath: "" }, "/x.png")).resolves.toBeUndefined();
   });
 });
 
