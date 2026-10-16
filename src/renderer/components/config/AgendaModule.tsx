@@ -3,7 +3,9 @@ import type { AgendaState, AppConfig, SecretStatus } from "../../../shared/types
 import { CALENDAR_SECRET } from "../../../shared/providers.js";
 import { AuthControls, describeError, NoticeLine, useAuth, type Notice } from "./auth.js";
 import { notify } from "./toast.js";
-import { Check, Field } from "./ui.js";
+import { listOutputDevices, playReminderSound, type OutputDevice } from "../../audio/reminderSound.js";
+import { isReminderSound, REMINDER_SOUNDS } from "../../../shared/sounds.js";
+import { Check, Field, NumberField } from "./ui.js";
 
 const REMINDER_CHOICES = [30, 15, 10, 5, 2, 1];
 
@@ -39,6 +41,27 @@ export function AgendaModule({ config, setConfig, persist }: { config: AppConfig
       await window.painelApi.clearSecret(CALENDAR_SECRET);
       setSecret({ configured: false, hint: null });
       notify("ok", "segredo da agenda removido");
+    } catch (error) {
+      notify("err", describeError(error));
+    }
+  }
+
+  const sound = config.agenda.sound;
+  const setSound = (patch: Partial<typeof sound>) => setAgendaConfig({ sound: { ...sound, ...patch } });
+
+  const [outputs, setOutputs] = useState<OutputDevice[]>([]);
+  useEffect(() => {
+    const load = () => listOutputDevices().then(setOutputs).catch(() => undefined);
+    void load();
+    navigator.mediaDevices.addEventListener("devicechange", load);
+    return () => navigator.mediaDevices.removeEventListener("devicechange", load);
+  }, []);
+
+  async function testSound() {
+    try {
+      const played = await playReminderSound(sound.id, sound.volume, sound.deviceId);
+      if (played.usedRequestedDevice) notify("ok", "som tocando");
+      else notify("err", "essa saída não está disponível; o som saiu na padrão do sistema");
     } catch (error) {
       notify("err", describeError(error));
     }
@@ -112,6 +135,46 @@ export function AgendaModule({ config, setConfig, persist }: { config: AppConfig
       <Check checked={config.agenda.notify} onChange={(value) => setAgendaConfig({ notify: value })}>
         Avisar também com notificação do computador
       </Check>
+
+      <h3 className="cfg-sub">SOM DO LEMBRETE</h3>
+      <Check checked={sound.enabled} onChange={(value) => setSound({ enabled: value })}>
+        Tocar um som quando o lembrete disparar
+      </Check>
+      <div className="cfg-row">
+        <Field label="Som">
+          <select
+            className="px-input"
+            value={sound.id}
+            onChange={(event) => isReminderSound(event.target.value) && setSound({ id: event.target.value })}
+          >
+            {REMINDER_SOUNDS.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Volume (0 a 100)">
+          <NumberField value={sound.volume} max={100} onChange={(volume) => setSound({ volume })} />
+        </Field>
+      </div>
+      <div className="cfg-row">
+        <Field label="Saída de áudio">
+          <select className="px-input" value={sound.deviceId} onChange={(event) => setSound({ deviceId: event.target.value })}>
+            <option value="">Padrão do sistema</option>
+            {outputs.map((output) => (
+              <option key={output.id} value={output.id}>
+                {output.label}
+              </option>
+            ))}
+            {sound.deviceId && !outputs.some((output) => output.id === sound.deviceId) ? <option value={sound.deviceId}>Saída escolhida (desconectada)</option> : null}
+          </select>
+        </Field>
+        <button className="px-btn px-btn-primary" type="button" onClick={testSound}>
+          TESTAR SOM
+        </button>
+      </div>
+      <p className="cfg-note">Escolhendo o fone ou a caixa aqui, o som sai nela mesmo que o sistema esteja usando outra saída. Se a saída escolhida estiver desligada, toca na padrão.</p>
     </>
   );
 }

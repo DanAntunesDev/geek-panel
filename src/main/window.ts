@@ -68,6 +68,8 @@ export function createMainWindow(show = true): BrowserWindow {
       contextIsolation: true,
       sandbox: true,
       webSecurity: true,
+      // o som do lembrete toca mesmo com a janela escondida na bandeja
+      autoplayPolicy: "no-user-gesture-required",
     },
   });
 

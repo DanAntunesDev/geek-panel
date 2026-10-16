@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ConfigPanel } from "./components/ConfigPanel.js";
 import { ScreenTabs, type TabKey } from "./components/ScreenTabs.js";
 import { TitleBar } from "./components/TitleBar.js";
+import { playReminderSound } from "./audio/reminderSound.js";
 import { useTheme } from "./state/useTheme.js";
 import { DeviceFrame } from "./pixel/DeviceFrame.js";
 import { AgendaScreen } from "./screens/AgendaScreen.js";
@@ -15,7 +16,17 @@ export function App() {
   const themeKey = useTheme();
 
   // Quando um lembrete dispara, a agenda vem para a frente.
-  useEffect(() => window.painelApi.onAgendaReminder(() => setTab("agenda")), []);
+  useEffect(
+    () =>
+      window.painelApi.onAgendaReminder(() => {
+        setTab("agenda");
+        window.painelApi
+          .getConfig()
+          .then(({ agenda }) => (agenda.sound.enabled ? playReminderSound(agenda.sound.id, agenda.sound.volume, agenda.sound.deviceId) : undefined))
+          .catch(() => undefined);
+      }),
+    [],
+  );
 
   return (
     <div key={themeKey} style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
