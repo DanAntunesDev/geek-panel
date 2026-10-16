@@ -80,6 +80,7 @@ static void handleRoot() {
   body += "<h2>Painel</h2><form method='post' action='/settings'><label>IP do PC (vazio = achar sozinho)</label><input name='server' value=\"" + esc(settings.serverIp) + "\">";
   body += "<label>Código de pareamento (o mesmo da Config do app)</label><input name='code' value=\"" + esc(settings.code) + "\" maxlength='16'>";
   body += "<label>Brilho</label><input name='brightness' type='range' min='0' max='100' value='" + String(settings.brightness) + "'>";
+  body += "<label>Contraste</label><input name='contrast' type='range' min='0' max='100' value='" + String(settings.contrast) + "'>";
   body += "<label>Rotação da tela</label><select name='rotation'>";
   for (int r = 0; r < 4; r++) body += String("<option value='") + r + "'" + (settings.rotation == r ? " selected" : "") + ">" + (r * 90) + "°</option>";
   body += "</select><h2>Se as cores ou a luz estiverem estranhas</h2>";
@@ -121,6 +122,7 @@ static void handleSettings() {
   strlcpy(settings.code, server.arg("code").c_str(), sizeof(settings.code));
   settings.brightness = constrain(server.arg("brightness").toInt(), 0, 100);
   settings.rotation = constrain(server.arg("rotation").toInt(), 0, 3);
+  settings.contrast = constrain(server.arg("contrast").toInt(), 0, 100);
   settings.flags = (server.hasArg("invert") ? FLAG_INVERT : 0) | (server.hasArg("swap") ? FLAG_SWAP : 0) | (server.hasArg("bl") ? FLAG_BACKLIGHT_LOW : 0);
   settingsSave();
   displayApplySettings();
@@ -138,6 +140,17 @@ static void handlePair() {
   strlcpy(settings.code, server.arg("code").c_str(), sizeof(settings.code));
   if (server.hasArg("server")) strlcpy(settings.serverIp, server.arg("server").c_str(), sizeof(settings.serverIp));
   settingsSave();
+  server.send(200, "text/plain", "ok");
+}
+
+// Brilho e contraste, guardados no aparelho: valem também na tela de espera.
+static void handleDisplay() {
+  if (!authorized()) return;
+  if (server.hasArg("brightness")) settings.brightness = constrain(server.arg("brightness").toInt(), 0, 100);
+  if (server.hasArg("contrast")) settings.contrast = constrain(server.arg("contrast").toInt(), 0, 100);
+  settingsSave();
+  displayBrightness(settings.brightness);
+  if (streamHasFrame()) displayDraw();
   server.send(200, "text/plain", "ok");
 }
 
@@ -196,6 +209,7 @@ void portalBegin() {
   server.on("/settings", HTTP_POST, handleSettings);
   server.on("/test", HTTP_POST, handleTest);
   server.on("/pair", HTTP_POST, handlePair);
+  server.on("/display", HTTP_POST, handleDisplay);
 #endif
   server.on("/reset", HTTP_POST, handleReset);
   server.on("/reboot", HTTP_POST, handleReboot);

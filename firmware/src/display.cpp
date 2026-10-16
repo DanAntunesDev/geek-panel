@@ -54,8 +54,22 @@ void displayInit() {
 
 // Desenha o quadro com a paleta dada. As telas de espera e o padrão de teste usam a de partida,
 // sem mexer na que o app mandou: um quadro de espera atrasado não pode apagar as cores do painel.
-static void drawFrame(const uint16_t* colors, uint8_t count) {
+// Contraste por software: afasta (ou aproxima) cada cor do cinza médio. 50 deixa como está.
+static uint16_t withContrast(uint16_t color) {
+  int32_t factor = 50 + settings.contrast;
+  int32_t channels[3] = {((color >> 11) & 31) * 255 / 31, ((color >> 5) & 63) * 255 / 63, (color & 31) * 255 / 31};
+  for (int32_t& value : channels) {
+    value = 128 + (value - 128) * factor / 100;
+    if (value < 0) value = 0;
+    if (value > 255) value = 255;
+  }
+  return ((channels[0] & 0xF8) << 8) | ((channels[1] & 0xFC) << 3) | (channels[2] >> 3);
+}
+
+static void drawFrame(const uint16_t* source, uint8_t count) {
   static uint16_t line[SCREEN_SIZE];
+  uint16_t colors[16];
+  for (uint8_t i = 0; i < count && i < 16; i++) colors[i] = withContrast(source[i]);
   tft.startWrite();
   tft.setAddrWindow(0, 0, SCREEN_SIZE, SCREEN_SIZE);
   for (uint16_t y = 0; y < FRAME_SIZE; y++) {
