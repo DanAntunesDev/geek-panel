@@ -1,135 +1,182 @@
 import { useEffect, useState } from "react";
-import type { AppConfig } from "../../shared/types.js";
+import type { AppConfig, ClockStyle, DisplayMode, ManualMode } from "../../shared/types.js";
+import { AgendaModule } from "./config/AgendaModule.js";
+import { DeviceModule } from "./config/DeviceModule.js";
+import { MediaModule } from "./config/MediaModule.js";
+import { ThemeModule } from "./config/ThemeModule.js";
+import { ProvidersModule } from "./config/ProvidersModule.js";
+import { notify, Toaster } from "./config/toast.js";
+import { Check, Divider, Field, Module, NumberField, Segmented } from "./config/ui.js";
 
-// Editor visual da configuração (seção 11 da spec). Campos de host/porta
-// são realmente editáveis e validados pelo processo principal ao salvar.
+const ROTATION_MODES: { value: ManualMode; label: string }[] = [
+  { value: "automatic", label: "AUTO" },
+  { value: "player", label: "PLAYER" },
+  { value: "usage", label: "TOKENS" },
+  { value: "clock", label: "RELÓGIO" },
+  { value: "agenda", label: "AGENDA" },
+];
+
+const CLOCK_STYLES: { value: ClockStyle; label: string }[] = [
+  { value: "digital", label: "DIGITAL" },
+  { value: "analog", label: "ANALÓGICO" },
+  { value: "flip", label: "FLIP" },
+];
+
+type RotationKey = "playerSeconds" | "usageSeconds" | "clockSeconds" | "agendaSeconds";
+
+const ROTATION_FIELDS: { key: RotationKey; screen: DisplayMode; label: string }[] = [
+  { key: "playerSeconds", screen: "player", label: "Player" },
+  { key: "usageSeconds", screen: "usage", label: "Tokens" },
+  { key: "clockSeconds", screen: "clock", label: "Relógio" },
+  { key: "agendaSeconds", screen: "agenda", label: "Agenda" },
+];
+
 export function ConfigPanel() {
   const [config, setConfig] = useState<AppConfig | null>(null);
-  const [status, setStatus] = useState<{ address: string; port: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
     window.painelApi.getConfig().then(setConfig);
-    window.painelApi.getServerStatus().then(setStatus);
   }, []);
 
-  if (!config) {
-    return <p style={{ padding: 16 }}>Carregando configuração…</p>;
+  if (!config) return <p className="cfg">Carregando configuração…</p>;
+
+  const update = (next: AppConfig) => {
+    setConfig(next);
+    setSaved(false);
+    setDirty(true);
+  };
+
+  async function persist(next: AppConfig = config!) {
+    setConfig(await window.painelApi.saveConfig(next));
+    setDirty(false);
   }
 
   async function handleSave() {
-    if (!config) return;
     setError(null);
     setSaved(false);
     try {
-      const result = await window.painelApi.saveConfig(config);
-      setConfig(result);
+      await persist();
       setSaved(true);
+      notify("ok", "configuração salva");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "erro desconhecido");
+      const message = (err instanceof Error ? err.message : "erro desconhecido").replace(/^Error invoking remote method '[^']+': (Error: )?/, "");
+      setError(message);
+      notify("err", message);
     }
   }
 
   return (
-    <section style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
-      <h2 style={{ fontSize: 14, margin: 0 }}>Configuração</h2>
+    <div className="cfg">
+      <Toaster />
+      <div className="cfg-inner">
+        <Module title="DISPLAY REMOTO" help="device">
+          <DeviceModule config={config} setConfig={update} persist={() => persist()} />
+        </Module>
 
-      <label>
-        Host do display
-        <input
-          value={config.device.host}
-          onChange={(event) => setConfig({ ...config, device: { ...config.device, host: event.target.value } })}
-          style={{ width: "100%" }}
-        />
-      </label>
+        <Divider />
 
-      <label>
-        Porta do display
-        <input
-          type="number"
-          value={config.device.port}
-          onChange={(event) =>
-            setConfig({ ...config, device: { ...config.device, port: Number(event.target.value) } })
-          }
-          style={{ width: "100%" }}
-        />
-      </label>
+        <Module title="APARÊNCIA" help="appearance">
+          <ThemeModule config={config} setConfig={update} />
+        </Module>
 
-      <fieldset>
-        <legend>Rotação (segundos)</legend>
-        <label>
-          Player
-          <input
-            type="number"
-            value={config.rotation.playerSeconds}
-            onChange={(event) =>
-              setConfig({ ...config, rotation: { ...config.rotation, playerSeconds: Number(event.target.value) } })
-            }
+        <Divider />
+
+        <Module title="ROTAÇÃO DAS TELAS" help="rotation">
+          <Segmented
+            label="Modo"
+            value={config.rotation.mode}
+            options={ROTATION_MODES}
+            onChange={(mode) => update({ ...config, rotation: { ...config.rotation, mode } })}
           />
-        </label>
-        <label>
-          Uso
-          <input
-            type="number"
-            value={config.rotation.usageSeconds}
-            onChange={(event) =>
-              setConfig({ ...config, rotation: { ...config.rotation, usageSeconds: Number(event.target.value) } })
-            }
+          <p className="cfg-note">Tela desmarcada não entra no rodízio automático. Os tempos valem só para o modo AUTO.</p>
+          <h3 className="cfg-sub">TELAS NO RODÍZIO E TEMPO EM CADA UMA</h3>
+          <div className="cfg-row">
+            {ROTATION_FIELDS.map((field) => (
+              <div key={field.key} className="cfg-field">
+                <Check
+                  checked={config.rotation.enabled[field.screen]}
+                  onChange={(value) => update({ ...config, rotation: { ...config.rotation, enabled: { ...config.rotation.enabled, [field.screen]: value } } })}
+                >
+                  {field.label}
+                </Check>
+                <NumberField
+                  value={config.rotation[field.key]}
+                  min={1}
+                  max={600}
+                  onChange={(value) => update({ ...config, rotation: { ...config.rotation, [field.key]: value } })}
+                />
+                <span>segundos</span>
+              </div>
+            ))}
+          </div>
+        </Module>
+
+        <Divider />
+
+        <Module title="RELÓGIO" help="clock">
+          <Segmented
+            label="Estilo"
+            value={config.clock.style}
+            options={CLOCK_STYLES}
+            onChange={(style) => update({ ...config, clock: { ...config.clock, style } })}
           />
-        </label>
-        <label>
-          Relógio
-          <input
-            type="number"
-            value={config.rotation.clockSeconds}
-            onChange={(event) =>
-              setConfig({ ...config, rotation: { ...config.rotation, clockSeconds: Number(event.target.value) } })
-            }
-          />
-        </label>
-      </fieldset>
+          <div className="cfg-row" style={{ marginTop: 12 }}>
+            <Field label="Fuso horário">
+              <input className="px-input" value={config.clock.timezone} onChange={(event) => update({ ...config, clock: { ...config.clock, timezone: event.target.value } })} />
+            </Field>
+          </div>
+          <div className="cfg-row">
+            <Field label="Nome da cidade na tela (vazio usa o fuso)">
+              <input
+                className="px-input"
+                value={config.clock.city}
+                maxLength={24}
+                placeholder="Ex.: Curitiba"
+                onChange={(event) => update({ ...config, clock: { ...config.clock, city: event.target.value } })}
+              />
+            </Field>
+          </div>
+          <Check checked={config.clock.showDate} onChange={(value) => update({ ...config, clock: { ...config.clock, showDate: value } })}>
+            Mostrar data e dia da semana
+          </Check>
+          <Check checked={config.clock.showSeconds} onChange={(value) => update({ ...config, clock: { ...config.clock, showSeconds: value } })}>
+            Mostrar segundos
+          </Check>
+          <Check checked={config.clock.hour12} onChange={(value) => update({ ...config, clock: { ...config.clock, hour12: value } })}>
+            Formato de 12 horas (AM/PM)
+          </Check>
+        </Module>
 
-      <label>
-        Fuso horário
-        <input
-          value={config.clock.timezone}
-          onChange={(event) => setConfig({ ...config, clock: { ...config.clock, timezone: event.target.value } })}
-          style={{ width: "100%" }}
-        />
-      </label>
+        <Divider />
 
-      <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <input
-          type="checkbox"
-          checked={config.server.lanMode}
-          onChange={(event) => setConfig({ ...config, server: { ...config.server, lanMode: event.target.checked } })}
-        />
-        Habilitar modo LAN (o servidor fica acessível a outros dispositivos da rede)
-      </label>
+        <Module title="AGENDA" help="calendar">
+          <AgendaModule config={config} setConfig={update} persist={() => persist()} />
+        </Module>
 
-      {config.server.lanMode ? (
-        <label>
-          Interface de rede
-          <input
-            value={config.server.lanInterface ?? ""}
-            onChange={(event) =>
-              setConfig({ ...config, server: { ...config.server, lanInterface: event.target.value || null } })
-            }
-            style={{ width: "100%" }}
-          />
-        </label>
-      ) : null}
+        <Divider />
 
-      <button onClick={handleSave}>Salvar</button>
-      {saved ? <p style={{ color: "green", fontSize: 12 }}>Configuração salva.</p> : null}
-      {error ? <p style={{ color: "crimson", fontSize: 12 }}>{error}</p> : null}
+        <Module title="MÚSICA E VÍDEO">
+          <MediaModule config={config} setConfig={update} persist={() => persist()} />
+        </Module>
 
-      {status ? (
-        <p style={{ fontSize: 12, opacity: 0.7 }}>
-          Servidor local ativo em {status.address}:{status.port}
-        </p>
-      ) : null}
-    </section>
+        <Divider />
+
+        <Module title="PROVEDORES DE TOKENS">
+          <ProvidersModule config={config} setConfig={update} persist={persist} />
+        </Module>
+
+        <Divider />
+
+        <button className="px-btn px-btn-primary" type="button" onClick={handleSave}>
+          SALVAR CONFIGURAÇÃO
+        </button>
+        {dirty ? <p className="cfg-note">Há alterações que ainda não foram salvas.</p> : null}
+        {saved ? <p className="cfg-note">OK: configuração salva.</p> : null}
+        {error ? <p className="cfg-note">ERRO: {error}</p> : null}
+      </div>
+    </div>
   );
 }

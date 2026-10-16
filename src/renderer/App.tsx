@@ -1,47 +1,51 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ConfigPanel } from "./components/ConfigPanel.js";
 import { ScreenTabs, type TabKey } from "./components/ScreenTabs.js";
+import { TitleBar } from "./components/TitleBar.js";
+import { playReminderSound } from "./audio/reminderSound.js";
+import { useTheme } from "./state/useTheme.js";
+import { DeviceFrame } from "./pixel/DeviceFrame.js";
+import { AgendaScreen } from "./screens/AgendaScreen.js";
 import { ClockScreen } from "./screens/ClockScreen.js";
 import { PlayerScreen } from "./screens/PlayerScreen.js";
 import { UsageScreen } from "./screens/UsageScreen.js";
-import {
-  buildFakeClockState,
-  buildFakeMediaState,
-  buildFakeUsageCards,
-} from "../services/fixtures/fakeState.js";
-import type { AppConfig } from "../shared/types.js";
-
-const FALLBACK_CLOCK_CONFIG = { timezone: "America/Sao_Paulo", showDate: true };
+import { WaitingScreen } from "./screens/WaitingScreen.js";
 
 export function App() {
-  const [tab, setTab] = useState<TabKey>("usage");
-  const [config, setConfig] = useState<AppConfig | null>(null);
-  const [now, setNow] = useState(() => new Date());
+  const [tab, setTab] = useState<TabKey>("player");
+  // refaz a tela quando a cor de destaque muda
+  const themeKey = useTheme();
 
-  useEffect(() => {
-    window.painelApi.getConfig().then(setConfig);
-  }, []);
-
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const media = useMemo(() => buildFakeMediaState(), []);
-  const usageCards = useMemo(() => buildFakeUsageCards(), []);
-  const clock = useMemo(
-    () => buildFakeClockState(config?.clock ?? FALLBACK_CLOCK_CONFIG),
-    [config, now],
+  // Quando um lembrete dispara, a agenda vem para a frente.
+  useEffect(
+    () =>
+      window.painelApi.onAgendaReminder(() => {
+        setTab("agenda");
+        window.painelApi
+          .getConfig()
+          .then(({ agenda }) => (agenda.sound.enabled ? playReminderSound(agenda.sound.id, agenda.sound.volume, agenda.sound.deviceId) : undefined))
+          .catch(() => undefined);
+      }),
+    [],
   );
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+    <div key={themeKey} style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+      <TitleBar />
       <ScreenTabs active={tab} onChange={setTab} />
-      <div style={{ flex: 1, overflow: "auto" }}>
-        {tab === "player" ? <PlayerScreen media={media} /> : null}
-        {tab === "usage" ? <UsageScreen cards={usageCards} /> : null}
-        {tab === "clock" ? <ClockScreen clock={clock} connected={false} /> : null}
-        {tab === "config" ? <ConfigPanel /> : null}
+      <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column" }}>
+        {tab === "config" ? (
+          <ConfigPanel />
+        ) : tab === "waiting" ? (
+          <WaitingScreen />
+        ) : (
+          <DeviceFrame>
+            {tab === "player" ? <PlayerScreen /> : null}
+            {tab === "usage" ? <UsageScreen /> : null}
+            {tab === "clock" ? <ClockScreen /> : null}
+            {tab === "agenda" ? <AgendaScreen /> : null}
+          </DeviceFrame>
+        )}
       </div>
     </div>
   );

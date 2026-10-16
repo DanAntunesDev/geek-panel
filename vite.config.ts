@@ -17,7 +17,13 @@ export default defineConfig({
         vite: {
           build: {
             outDir: path.join(rootDir, "dist-electron/main"),
-            rollupOptions: { external: ["electron", "express"] },
+            rollupOptions: {
+              external: ["electron", "dbus-next"],
+              output: {
+                format: "cjs",
+                entryFileNames: "app.js",
+              },
+            },
           },
         },
       },

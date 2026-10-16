@@ -2,13 +2,10 @@
 
 import { app, BrowserWindow, Menu, Tray } from "electron";
 import * as path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export function createTray(window: BrowserWindow): Tray {
   const tray = new Tray(path.join(__dirname, "../../assets/pixel/tray.png"));
-  tray.setToolTip("Painel local");
+  tray.setToolTip("Geek Painel");
 
   const menu = Menu.buildFromTemplate([
     {

@@ -1,0 +1,90 @@
+// Troca de vinil: levanta a agulha, o disco velho sai, o novo entra e a agulha desce.
+// A agulha leva 6 quadros para subir; só então o disco velho sai.
+export const SWAP_FRAMES = 16;
+const LIFT = 6;
+const OUT = 11;
+const IN = 16;
+const SLIDE_STEP = 13;
+
+// Até aqui o disco velho ainda está no prato: uma faixa nova ainda cabe nesta mesma troca.
+export const OLD_DISC_FRAMES = OUT;
+
+export interface SwapFrame {
+  armUp: boolean;
+  vinylOffset: number;
+  // Qual faixa aparece no marquee e no desenho do disco.
+  content: "old" | "new";
+  ringHidden: boolean;
+}
+
+export function swapAt(frame: number): SwapFrame {
+  if (frame < LIFT) return { armUp: true, vinylOffset: 0, content: "old", ringHidden: false };
+  if (frame < OUT) return { armUp: true, vinylOffset: -(frame - LIFT + 1) * SLIDE_STEP, content: "old", ringHidden: true };
+  if (frame < IN) return { armUp: true, vinylOffset: (IN - frame) * SLIDE_STEP, content: "new", ringHidden: true };
+  return { armUp: false, vinylOffset: 0, content: "new", ringHidden: false };
+}
+
+export const swapDone = (frame: number) => frame >= SWAP_FRAMES;
+
+export interface SwapState {
+  // quadro em que a troca atual começou; -1 sem troca
+  start: number;
+  // faixa nova esperando por uma troca
+  pending: boolean;
+  // o clique já trocou o disco; a música nova ainda não chegou do player
+  waiting: boolean;
+  // quadros que o prato ficou vazio esperando a música nova
+  held: number;
+}
+
+export const newSwapState = (): SwapState => ({ start: -1, pending: false, waiting: false, held: 0 });
+
+// No máximo este tempo de prato vazio esperando o player trazer a música nova.
+export const HOLD_FRAMES = 40;
+
+// Clique em próxima/anterior: o disco troca na hora, sem esperar o player responder.
+export function requestSwap(state: SwapState): void {
+  state.pending = true;
+  state.waiting = true;
+}
+
+// A música nova chegou do player. Se o clique já pediu a troca, ela só continua; senão pede uma.
+export function trackArrived(state: SwapState): void {
+  if (state.waiting) state.waiting = false;
+  else state.pending = true;
+}
+
+// Cada faixa nova ganha uma troca completa. Se o disco velho ainda está no prato, a troca em
+// andamento já serve; se o novo já entrou, a próxima começa quando esta terminar.
+export function advanceSwap(state: SwapState, frame: number): void {
+  if (state.start >= 0 && swapDone(frame - state.start)) state.start = -1;
+  if (state.pending) {
+    if (state.start < 0) {
+      state.pending = false;
+      state.start = frame;
+      state.held = 0;
+    } else if (frame - state.start < OLD_DISC_FRAMES) {
+      state.pending = false;
+    }
+  }
+  // disco velho já saiu e a música nova ainda não veio: prato vazio, agulha no alto
+  if (state.waiting && state.start >= 0 && frame - state.start >= OLD_DISC_FRAMES - 1) {
+    if (state.held < HOLD_FRAMES) {
+      state.held += 1;
+      state.start = frame - (OLD_DISC_FRAMES - 1);
+    } else {
+      state.waiting = false;
+    }
+  }
+}
+
+export function trackKey(title: string, artist: string): string | null {
+  return title ? `${title}|${artist}` : null;
+}
+
+// Número estável por faixa, para variar sulcos e selo do disco.
+export function seedOf(title: string, artist: string): number {
+  let hash = 7;
+  for (const char of `${title}|${artist}`) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return hash % 1000;
+}

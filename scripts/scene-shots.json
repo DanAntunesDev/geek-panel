@@ -1,0 +1,363 @@
+[
+ {
+  "name": "agenda-desconectada",
+  "scene": "agenda",
+  "state": {
+   "connected": false,
+   "account": null,
+   "updatedAt": null,
+   "error": null
+  }
+ },
+ {
+  "name": "agenda-vazia",
+  "scene": "agenda",
+  "state": {
+   "connected": true,
+   "account": "eu@exemplo.com",
+   "updatedAt": "2026-10-14T17:00:00Z",
+   "error": null
+  }
+ },
+ {
+  "name": "agenda-normal",
+  "scene": "agenda",
+  "frame": 3,
+  "state": {
+   "connected": true,
+   "account": "eu@exemplo.com",
+   "updatedAt": "2026-10-14T17:00:00Z",
+   "error": null
+  },
+  "events": [
+   {
+    "title": "Alinhamento do projeto com o time",
+    "in": 47
+   },
+   {
+    "title": "Almoço",
+    "in": 150,
+    "len": 60
+   },
+   {
+    "title": "Revisão de PR",
+    "in": 240
+   },
+   {
+    "title": "Feriado",
+    "in": 600,
+    "allDay": true
+   }
+  ]
+ },
+ {
+  "name": "agenda-10min",
+  "scene": "agenda",
+  "frame": 3,
+  "state": {
+   "connected": true,
+   "account": "eu@exemplo.com",
+   "updatedAt": "2026-10-14T17:00:00Z",
+   "error": null
+  },
+  "events": [
+   {
+    "title": "Daily",
+    "in": 9
+   },
+   {
+    "title": "Almoço",
+    "in": 150,
+    "len": 60
+   }
+  ]
+ },
+ {
+  "name": "agenda-5min-a",
+  "scene": "agenda",
+  "frame": 1,
+  "state": {
+   "connected": true,
+   "account": "eu@exemplo.com",
+   "updatedAt": "2026-10-14T17:00:00Z",
+   "error": null
+  },
+  "events": [
+   {
+    "title": "Daily",
+    "in": 4
+   },
+   {
+    "title": "Almoço",
+    "in": 150,
+    "len": 60
+   }
+  ]
+ },
+ {
+  "name": "agenda-5min-b",
+  "scene": "agenda",
+  "frame": 4,
+  "state": {
+   "connected": true,
+   "account": "eu@exemplo.com",
+   "updatedAt": "2026-10-14T17:00:00Z",
+   "error": null
+  },
+  "events": [
+   {
+    "title": "Daily",
+    "in": 4
+   },
+   {
+    "title": "Almoço",
+    "in": 150,
+    "len": 60
+   }
+  ]
+ },
+ {
+  "name": "agenda-agora",
+  "scene": "agenda",
+  "frame": 2,
+  "state": {
+   "connected": true,
+   "account": "eu@exemplo.com",
+   "updatedAt": "2026-10-14T17:00:00Z",
+   "error": null
+  },
+  "events": [
+   {
+    "title": "Daily",
+    "in": -2
+   },
+   {
+    "title": "Almoço",
+    "in": 150,
+    "len": 60
+   }
+  ]
+ },
+ {
+  "name": "usage-p1",
+  "scene": "usage",
+  "view": {
+   "spinning": false,
+   "updatedAtLabel": "14:00",
+   "frame": 12,
+   "cards": [
+    {
+     "id": "openai",
+     "label": "OpenAI",
+     "period": "mês atual",
+     "used": 12400000,
+     "limit": 50000000,
+     "remaining": 37600000,
+     "percentage": 25,
+     "resetAt": null,
+     "status": "ok",
+     "updatedAt": "",
+     "note": null
+    },
+    {
+     "id": "anthropic",
+     "label": "Anthropic",
+     "period": "mês atual",
+     "used": 2100000,
+     "limit": 0,
+     "remaining": 0,
+     "percentage": 0,
+     "resetAt": null,
+     "status": "ok",
+     "updatedAt": "",
+     "note": null
+    },
+    {
+     "id": "gemini",
+     "label": "Google Gemini",
+     "period": "mês atual",
+     "used": 0,
+     "limit": 0,
+     "remaining": 0,
+     "percentage": 0,
+     "resetAt": null,
+     "status": "unavailable",
+     "updatedAt": "",
+     "note": "sem API de consumo"
+    }
+   ]
+  }
+ },
+ {
+  "name": "usage-p2-girando",
+  "scene": "usage",
+  "view": {
+   "spinning": true,
+   "updatedAtLabel": "14:00",
+   "frame": 47,
+   "cards": [
+    {
+     "id": "openai",
+     "label": "OpenAI",
+     "period": "mês atual",
+     "used": 12400000,
+     "limit": 50000000,
+     "remaining": 37600000,
+     "percentage": 25,
+     "resetAt": null,
+     "status": "ok",
+     "updatedAt": "",
+     "note": null
+    },
+    {
+     "id": "anthropic",
+     "label": "Anthropic",
+     "period": "mês atual",
+     "used": 2100000,
+     "limit": 0,
+     "remaining": 0,
+     "percentage": 0,
+     "resetAt": null,
+     "status": "stale",
+     "updatedAt": "",
+     "note": "chave admin recusada"
+    },
+    {
+     "id": "gemini",
+     "label": "Google Gemini",
+     "period": "mês atual",
+     "used": 0,
+     "limit": 0,
+     "remaining": 0,
+     "percentage": 0,
+     "resetAt": null,
+     "status": "unavailable",
+     "updatedAt": "",
+     "note": "falta chave admin"
+    }
+   ]
+  }
+ },
+ {
+  "name": "usage-sem-provedor",
+  "scene": "usage",
+  "view": {
+   "spinning": false,
+   "updatedAtLabel": "16:15",
+   "frame": 0,
+   "cards": []
+  }
+ },
+ {
+  "name": "relogio-digital",
+  "scene": "clock",
+  "view": {
+   "style": "digital",
+   "timezone": "America/Sao_Paulo",
+   "showSeconds": true,
+   "showDate": true,
+   "hour12": false,
+   "frame": 0
+  }
+ },
+ {
+  "name": "relogio-analogico",
+  "scene": "clock",
+  "view": {
+   "style": "analog",
+   "timezone": "America/Sao_Paulo",
+   "showSeconds": true,
+   "showDate": true,
+   "hour12": false,
+   "frame": 0
+  }
+ },
+ {
+  "name": "relogio-flip",
+  "scene": "clock",
+  "view": {
+   "style": "flip",
+   "timezone": "America/Sao_Paulo",
+   "showSeconds": true,
+   "showDate": true,
+   "hour12": false,
+   "frame": 0
+  }
+ },
+ {
+  "name": "player-parado-a",
+  "scene": "player",
+  "view": {
+   "title": "Nada tocando",
+   "artist": "",
+   "playing": false,
+   "positionSeconds": 0,
+   "durationSeconds": 0,
+   "pressed": null,
+   "controlsEnabled": false,
+   "needleStep": 0,
+   "spin": 0,
+   "frame": 0,
+   "vinylOffset": 0,
+   "seed": 0,
+   "volume": null
+  }
+ },
+ {
+  "name": "player-parado-b",
+  "scene": "player",
+  "view": {
+   "title": "Nada tocando",
+   "artist": "",
+   "playing": false,
+   "positionSeconds": 0,
+   "durationSeconds": 0,
+   "pressed": null,
+   "controlsEnabled": false,
+   "needleStep": 0,
+   "spin": 0,
+   "frame": 14,
+   "vinylOffset": 0,
+   "seed": 0,
+   "volume": null
+  }
+ },
+ {
+  "name": "player-tocando-a",
+  "scene": "player",
+  "view": {
+   "title": "Me at the zoo",
+   "artist": "jawed",
+   "playing": true,
+   "positionSeconds": 42,
+   "durationSeconds": 214,
+   "pressed": null,
+   "controlsEnabled": true,
+   "needleStep": 3,
+   "spin": 13,
+   "frame": 3,
+   "vinylOffset": 0,
+   "seed": 0,
+   "volume": 0.625
+  }
+ },
+ {
+  "name": "player-tocando-b",
+  "scene": "player",
+  "view": {
+   "title": "Me at the zoo",
+   "artist": "jawed",
+   "playing": true,
+   "positionSeconds": 42,
+   "durationSeconds": 214,
+   "pressed": null,
+   "controlsEnabled": true,
+   "needleStep": 3,
+   "spin": 19,
+   "frame": 9,
+   "vinylOffset": 0,
+   "seed": 0,
+   "volume": 0.625
+  }
+ }
+]
