@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { AppConfig, DeviceCheck, DeviceLinkStatus } from "../../../shared/types.js";
 import { describeError } from "./auth.js";
 import { notify } from "./toast.js";
+import { WaitingPreview } from "./WaitingPreview.js";
 import { Check, Chip, Field, NumberField } from "./ui.js";
 
 function newCode(): string {
@@ -20,6 +21,7 @@ const FAILURES = {
 
 export function DeviceModule({ config, setConfig, persist }: { config: AppConfig; setConfig: (next: AppConfig) => void; persist: () => Promise<void> }) {
   const [result, setResult] = useState<DeviceCheck | "testing" | null>(null);
+  const [showWaiting, setShowWaiting] = useState(false);
   const [busy, setBusy] = useState<"pair" | "reset" | null>(null);
   const [link, setLink] = useState<DeviceLinkStatus | null>(null);
 
@@ -138,10 +140,14 @@ export function DeviceModule({ config, setConfig, persist }: { config: AppConfig
         <button className="px-btn px-btn-primary" type="button" disabled={busy !== null} onClick={sendCode}>
           {busy === "pair" ? "ENVIANDO…" : "ENVIAR CÓDIGO AO APARELHO"}
         </button>
+        <button className="px-btn" type="button" onClick={() => setShowWaiting(true)}>
+          VER TELA DE ESPERA
+        </button>
         <button className="px-btn" type="button" disabled={busy !== null} onClick={wipe}>
           {busy === "reset" ? "APAGANDO…" : "APAGAR WI-FI E CÓDIGO DO APARELHO"}
         </button>
       </div>
+      {showWaiting ? <WaitingPreview onClose={() => setShowWaiting(false)} /> : null}
       <p className="cfg-note">Só o aparelho com este código recebe as telas. Vazio libera qualquer aparelho da rede.</p>
       <div className="cfg-row">
         <Field label="Brilho do aparelho (0 a 100)">
