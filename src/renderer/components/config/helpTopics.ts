@@ -14,7 +14,7 @@ export const HELP: Record<string, HelpTopic> = {
     title: "Ligar o GeekMagic ao painel",
     hint: "Como parear o aparelho com este computador.",
     steps: [
-      "Ligue o aparelho. Se ele não achar o painel, a tela mostra \"procurando o Geek Panel\".",
+      "Ligue o aparelho. Se ele não achar o painel, a tela mostra \"procurando o Geek Painel\".",
       "Deixe este app aberto no computador e confira que \"Conectar ao aparelho sozinho\" está marcado.",
       "Se o aparelho aparecer como RECUSADO, o código dele é diferente do que está aqui: clique em ENVIAR CÓDIGO AO APARELHO.",
       "Primeira vez, ou trocou de Wi-Fi: com o celular, entre na rede GeekPanel, abra http://192.168.4.1 e informe o nome e a senha do seu Wi-Fi (só rede de 2,4 GHz).",

@@ -20,7 +20,7 @@ export function TitleBar() {
       }
     >
       <span className="pixel-title" style={{ fontSize: 9 }}>
-        PAINEL LOCAL
+        GEEK PAINEL
       </span>
       <div style={{ display: "flex", WebkitAppRegion: "no-drag" } as React.CSSProperties}>
         <PixelIconButton

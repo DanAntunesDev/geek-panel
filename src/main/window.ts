@@ -58,7 +58,7 @@ export function createMainWindow(show = true): BrowserWindow {
     height: 650,
     minWidth: 540,
     minHeight: 440,
-    title: "Painel local",
+    title: "Geek Painel",
     icon: path.join(__dirname, "../../assets/pixel/icon-512.png"),
     frame: false,
     backgroundColor: "#F7F6F3",

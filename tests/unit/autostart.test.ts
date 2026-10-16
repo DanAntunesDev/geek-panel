@@ -50,7 +50,7 @@ describe("installLinuxLauncher", () => {
     await installLinuxLauncher(linux(), icon);
 
     const text = await fs.readFile(path.join(home, "data", "applications", "com.geekpanel.app.desktop"), "utf-8");
-    expect(text).toContain("Name=Painel local");
+    expect(text).toContain("Name=Geek Painel");
     expect(text).toContain('Exec="/opt/geek-panel/geek-panel"\n');
     expect(text).toContain("StartupWMClass=com.geekpanel.app");
     expect(text).toContain(`Icon=${path.join(home, "data", "icons", "hicolor", "512x512", "apps", "com.geekpanel.app.png")}`);

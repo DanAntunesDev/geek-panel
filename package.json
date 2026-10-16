@@ -33,7 +33,7 @@
   },
   "build": {
     "appId": "com.geekpanel.app",
-    "productName": "Painel local",
+    "productName": "Geek Painel",
     "directories": {
       "output": "release"
     },

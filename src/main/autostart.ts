@@ -20,7 +20,7 @@ export const HIDDEN_FLAG = "--hidden";
 const APP_CLASS = "com.geekpanel.app";
 
 export function desktopEntry(exec: string, icon?: string): string {
-  const lines = ["[Desktop Entry]", "Type=Application", "Name=Geek Panel", `Exec=${exec}`, "Terminal=false", "X-GNOME-Autostart-enabled=true", `StartupWMClass=${APP_CLASS}`];
+  const lines = ["[Desktop Entry]", "Type=Application", "Name=Geek Painel", `Exec=${exec}`, "Terminal=false", "X-GNOME-Autostart-enabled=true", `StartupWMClass=${APP_CLASS}`];
   if (icon) lines.push(`Icon=${icon}`);
   return [...lines, ""].join("\n");
 }
@@ -38,7 +38,7 @@ export async function installLinuxLauncher(deps: AutostartDeps, iconSource: stri
   await fs.copyFile(iconSource, iconTarget);
 
   const entry = path.join(data, "applications", `${APP_CLASS}.desktop`);
-  const text = desktopEntry(launcherProgram(deps), iconTarget).replace("Name=Geek Panel", "Name=Painel local").replace("X-GNOME-Autostart-enabled=true\n", "");
+  const text = desktopEntry(launcherProgram(deps), iconTarget).replace("X-GNOME-Autostart-enabled=true\n", "");
   await fs.mkdir(path.dirname(entry), { recursive: true });
   if ((await fs.readFile(entry, "utf-8").catch(() => "")) !== text) await fs.writeFile(entry, text, "utf-8");
 }

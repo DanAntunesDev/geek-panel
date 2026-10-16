@@ -5,7 +5,7 @@ import * as path from "node:path";
 
 export function createTray(window: BrowserWindow): Tray {
   const tray = new Tray(path.join(__dirname, "../../assets/pixel/tray.png"));
-  tray.setToolTip("Painel local");
+  tray.setToolTip("Geek Painel");
 
   const menu = Menu.buildFromTemplate([
     {
