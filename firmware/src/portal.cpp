@@ -43,7 +43,7 @@ static String page(const String& body) {
             "h1{font-size:18px;border-bottom:3px solid #e8368f;display:inline-block}h2{font-size:14px;margin:20px 0 6px}"
             "label{display:block;margin:8px 0 2px}input,select{width:100%;box-sizing:border-box;padding:8px;border:2px solid #1c1c1c;background:#fff;font:inherit}"
             "input[type=checkbox]{width:auto;margin-right:8px}button{margin-top:10px;padding:8px 12px;border:2px solid #1c1c1c;background:#d9d7d2;font:inherit}"
-            ".s{color:#787877}</style></head><body><h1>GEEK PANEL</h1>");
+            ".s{color:#787877}</style></head><body><h1>GEEK PAINEL</h1>");
   html += body;
   html += F("</body></html>");
   return html;
@@ -66,7 +66,7 @@ static void handleRoot() {
 #endif
   body += "<p>IP: " + WiFi.localIP().toString() + "<br>Wi-Fi: " + esc(WiFi.SSID()) + " (" + String(WiFi.RSSI()) + " dBm)</p>";
 #ifndef LOADER_ONLY
-  body += String(F("<p>Painel: ")) + (streamHasFrame() ? "recebendo telas" : "procurando o Geek Panel no PC") + "</p>";
+  body += String(F("<p>Painel: ")) + (streamHasFrame() ? "recebendo telas" : "procurando o Geek Painel no PC") + "</p>";
 #endif
 
   body += F("<h2>Wi-Fi</h2><form method='post' action='/wifi'><label>Rede</label><input name='ssid' list='nets' autocomplete='off'><datalist id='nets'>");

@@ -55,7 +55,7 @@ static const uint8_t DASH[GLYPH_H] = {0x00, 0x00, 0x00, 0x1F, 0x00, 0x00, 0x00};
 #define MESSAGE_LINES 2
 static const char* const MESSAGES[RAIN_MESSAGES][MESSAGE_LINES] = {
     {"CONECTANDO AO", "WI-FI..."},
-    {"PROCURANDO GEEK", "PANEL... ABRA NO PC"},
+    {"PROCURANDO GEEK", "PAINEL... ABRA NO PC"},
     {"REDE GEEKPANEL", "ABRA 192.168.4.1"},
     {"CODIGO DE PAREAMENTO", "NAO CONFERE"},
 };

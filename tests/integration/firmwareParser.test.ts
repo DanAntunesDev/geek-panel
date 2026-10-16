@@ -95,8 +95,8 @@ int main() {
     expect(white).toBeGreaterThan(0);
     expect(light).toBeGreaterThan(0);
     expect(gray).toBeGreaterThan(0);
-    // "NO SYSTEM IS SAFE", "PROCURANDO GEEK" e "PANEL... ABRA NO PC", sem os espaços
-    expect(total).toBe(14 + 14 + 16);
+    // "NO SYSTEM IS SAFE", "PROCURANDO GEEK" e "PAINEL... ABRA NO PC", sem os espaços
+    expect(total).toBe(14 + 14 + 17);
     // a chuva decifra tudo antes do tempo limite, sem precisar do empurrão final
     expect(decodedAt).toBeGreaterThan(0);
     expect(decodedAt).toBeLessThanOrEqual(220);

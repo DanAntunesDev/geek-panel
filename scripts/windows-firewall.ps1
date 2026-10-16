@@ -12,11 +12,13 @@ if (-not $admin) {
 }
 
 $rules = @(
-  @{ Name = "Geek Panel (TCP 4601)"; Protocol = "TCP"; Port = 4601 },
-  @{ Name = "Geek Panel (UDP 4602)"; Protocol = "UDP"; Port = 4602 }
+  @{ Name = "Geek Painel (TCP 4601)"; Protocol = "TCP"; Port = 4601 },
+  @{ Name = "Geek Painel (UDP 4602)"; Protocol = "UDP"; Port = 4602 }
 )
 
 foreach ($rule in $rules) {
+  # remove também a regra com o nome antigo ("Geek Panel"), se existir
+  Get-NetFirewallRule -DisplayName ($rule.Name -replace "Painel", "Panel") -ErrorAction SilentlyContinue | Remove-NetFirewallRule
   Get-NetFirewallRule -DisplayName $rule.Name -ErrorAction SilentlyContinue | Remove-NetFirewallRule
   if (-not $Remove) {
     New-NetFirewallRule -DisplayName $rule.Name -Direction Inbound -Action Allow -Protocol $rule.Protocol -LocalPort $rule.Port -Profile Private | Out-Null
