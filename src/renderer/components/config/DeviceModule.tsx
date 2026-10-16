@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AppConfig, DeviceCheck, DeviceLinkStatus } from "../../../shared/types.js";
 import { describeError } from "./auth.js";
 import { notify } from "./toast.js";
-import { WaitingPreview } from "./WaitingPreview.js";
-import { Check, Chip, Field, NumberField } from "./ui.js";
+import { Check, Chip, Field, NumberField, Slider } from "./ui.js";
 
 function newCode(): string {
   return String(crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000).padStart(6, "0");
@@ -21,7 +20,6 @@ const FAILURES = {
 
 export function DeviceModule({ config, setConfig, persist }: { config: AppConfig; setConfig: (next: AppConfig) => void; persist: () => Promise<void> }) {
   const [result, setResult] = useState<DeviceCheck | "testing" | null>(null);
-  const [showWaiting, setShowWaiting] = useState(false);
   const [busy, setBusy] = useState<"pair" | "reset" | null>(null);
   const [link, setLink] = useState<DeviceLinkStatus | null>(null);
 
@@ -29,6 +27,23 @@ export function DeviceModule({ config, setConfig, persist }: { config: AppConfig
     window.painelApi.getDeviceLink().then(setLink).catch(() => undefined);
     return window.painelApi.onDeviceLinkUpdate(setLink);
   }, []);
+
+  // sliders valem na hora: salva só brilho e contraste e manda para o aparelho, sem esperar o botão de salvar
+  const [display, setDisplay] = useState<string | null>(null);
+  const displayTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function changeDisplay(patch: Partial<Pick<AppConfig["device"], "brightness" | "contrast">>) {
+    const next = { ...config.device, ...patch };
+    setConfig({ ...config, device: next });
+    if (displayTimer.current) clearTimeout(displayTimer.current);
+    displayTimer.current = setTimeout(async () => {
+      try {
+        const result = await window.painelApi.applyDisplay(next.brightness, next.contrast);
+        setDisplay(result.ok ? `Aplicado no aparelho (HTTP ${result.status}).` : `Salvo, mas o aparelho não recebeu: ${result.message}.`);
+      } catch (error) {
+        setDisplay(`Não consegui aplicar: ${describeError(error)}`);
+      }
+    }, 250);
+  }
 
   async function sendCode() {
     setBusy("pair");
@@ -140,24 +155,17 @@ export function DeviceModule({ config, setConfig, persist }: { config: AppConfig
         <button className="px-btn px-btn-primary" type="button" disabled={busy !== null} onClick={sendCode}>
           {busy === "pair" ? "ENVIANDO…" : "ENVIAR CÓDIGO AO APARELHO"}
         </button>
-        <button className="px-btn" type="button" onClick={() => setShowWaiting(true)}>
-          VER TELA DE ESPERA
-        </button>
         <button className="px-btn" type="button" disabled={busy !== null} onClick={wipe}>
           {busy === "reset" ? "APAGANDO…" : "APAGAR WI-FI E CÓDIGO DO APARELHO"}
         </button>
       </div>
-      {showWaiting ? <WaitingPreview onClose={() => setShowWaiting(false)} /> : null}
       <p className="cfg-note">Só o aparelho com este código recebe as telas. Vazio libera qualquer aparelho da rede.</p>
-      <div className="cfg-row">
-        <Field label="Brilho do aparelho (0 a 100)">
-          <NumberField
-            value={config.device.brightness}
-            max={100}
-            onChange={(brightness) => setConfig({ ...config, device: { ...config.device, brightness } })}
-          />
-        </Field>
-      </div>
+      <h3 className="cfg-sub">TELA DO APARELHO</h3>
+      <Slider label="Brilho" value={config.device.brightness} onChange={(brightness) => changeDisplay({ brightness })} />
+      <Slider label="Contraste (50 = normal)" value={config.device.contrast} onChange={(contrast) => changeDisplay({ contrast })} />
+      <p className="cfg-note">
+        {display ?? "Vale na hora e fica guardado no aparelho, inclusive na tela de espera. Veja o efeito na aba Espera."}
+      </p>
       {result && result !== "testing" ? (
         <p className="cfg-note">
           {result.ok ? (

@@ -11,7 +11,7 @@ const MESSAGES: Record<number, string> = {
 
 export async function callDevice(
   host: string,
-  path: "/pair" | "/reset",
+  path: "/pair" | "/reset" | "/display",
   form: Record<string, string>,
   fetchImpl: FetchLike = fetch as unknown as FetchLike,
   timeoutMs = 5000,

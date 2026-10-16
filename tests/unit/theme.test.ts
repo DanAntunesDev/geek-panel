@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { validateConfig, DEFAULT_CONFIG } from "../../src/config/ConfigStore.js";
 import { DEVICE_PALETTE } from "../../src/shared/deviceConstants.js";
 import { configMessage } from "../../src/shared/deviceProtocol.js";
-import { DEFAULT_THEME, PALETTE_SIZE, shadeOf, themePalette } from "../../src/shared/theme.js";
+import { applyContrast, DEFAULT_THEME, PALETTE_SIZE, shadeOf, themePalette } from "../../src/shared/theme.js";
 
 describe("tema", () => {
   it("a sombra do magenta padrão é a da paleta original", () => {
@@ -42,5 +42,21 @@ describe("tema", () => {
     expect(saved.theme.clock.hour).toBe("#3B7DE0");
     expect(saved.theme.clock.city).toBeNull();
     expect(() => validateConfig({ theme: { clock: { hour: "verde" } } })).toThrow(/cor inválida/);
+  });
+
+  it("contraste 50 não muda a cor; mais afasta do cinza médio e menos aproxima", () => {
+    expect(applyContrast("#1C1C1C", 50)).toBe("#1C1C1C");
+    expect(applyContrast("#F7F6F3", 50)).toBe("#F7F6F3");
+    expect(applyContrast("#F7F6F3", 100)).toBe("#FFFFFF");
+    expect(applyContrast("#1C1C1C", 100)).toBe("#000000");
+    expect(applyContrast("#F7F6F3", 0)).toBe("#BCBBBA");
+    expect(applyContrast("#808080", 0)).toBe("#808080");
+  });
+
+  it("valida o contraste da config", () => {
+    expect(validateConfig({}).device.contrast).toBe(50);
+    expect(validateConfig({ device: { contrast: 80 } }).device.contrast).toBe(80);
+    expect(() => validateConfig({ device: { contrast: 101 } })).toThrow(/contraste/);
+    expect(() => validateConfig({ device: { contrast: 1.5 } })).toThrow(/contraste/);
   });
 });

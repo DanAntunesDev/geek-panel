@@ -9,6 +9,7 @@ import { AgendaScreen } from "./screens/AgendaScreen.js";
 import { ClockScreen } from "./screens/ClockScreen.js";
 import { PlayerScreen } from "./screens/PlayerScreen.js";
 import { UsageScreen } from "./screens/UsageScreen.js";
+import { WaitingScreen } from "./screens/WaitingScreen.js";
 
 export function App() {
   const [tab, setTab] = useState<TabKey>("player");
@@ -35,6 +36,8 @@ export function App() {
       <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column" }}>
         {tab === "config" ? (
           <ConfigPanel />
+        ) : tab === "waiting" ? (
+          <WaitingScreen />
         ) : (
           <DeviceFrame>
             {tab === "player" ? <PlayerScreen /> : null}

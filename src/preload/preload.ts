@@ -63,6 +63,7 @@ const api = {
   },
   pushDeviceFrame: (pixels: Uint8Array): void => ipcRenderer.send(IPC_CHANNELS.deviceFrame, pixels),
   pairDevice: (): Promise<DeviceAdminResult> => ipcRenderer.invoke(IPC_CHANNELS.pairDevice),
+  applyDisplay: (brightness: number, contrast: number): Promise<DeviceAdminResult> => ipcRenderer.invoke(IPC_CHANNELS.applyDisplay, brightness, contrast),
   resetDevice: (): Promise<DeviceAdminResult> => ipcRenderer.invoke(IPC_CHANNELS.resetDevice),
   testDevice: (): Promise<DeviceCheck> => ipcRenderer.invoke(IPC_CHANNELS.testDevice),
   getPlayback: (): Promise<PlaybackState> => ipcRenderer.invoke(IPC_CHANNELS.getPlayback),

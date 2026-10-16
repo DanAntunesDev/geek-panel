@@ -99,3 +99,14 @@ export function NumberField({
     />
   );
 }
+
+// Controle deslizante de 0 a 100, com o número ao lado.
+export function Slider({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
+  return (
+    <label className="cfg-slider">
+      <span>{label}</span>
+      <input type="range" min={0} max={100} value={value} onChange={(event) => onChange(Number(event.target.value))} />
+      <output>{value}</output>
+    </label>
+  );
+}

@@ -14,6 +14,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     port: 80,
     autoConnect: true,
     brightness: 60,
+    contrast: 50,
     pairingCode: "",
   },
   rotation: {
@@ -152,6 +153,9 @@ export function validateConfig(input: unknown): AppConfig {
   }
   if (!Number.isInteger(merged.device.brightness) || merged.device.brightness < 0 || merged.device.brightness > 100) {
     throw new ConfigValidationError("brilho fora do intervalo permitido");
+  }
+  if (!Number.isInteger(merged.device.contrast) || merged.device.contrast < 0 || merged.device.contrast > 100) {
+    throw new ConfigValidationError("contraste fora do intervalo permitido");
   }
   if (typeof merged.device.pairingCode !== "string" || !/^[0-9A-Za-z]{0,16}$/.test(merged.device.pairingCode)) {
     throw new ConfigValidationError("código de pareamento inválido (até 16 letras ou números)");

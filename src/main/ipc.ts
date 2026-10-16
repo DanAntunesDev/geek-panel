@@ -147,6 +147,21 @@ export function registerIpcHandlers(window: BrowserWindow, configStore: ConfigSt
     IPC_CHANNELS.pairDevice,
     trusted(async () => callDevice(await deviceHost(), "/pair", { code: (await configStore.load()).device.pairingCode })),
   );
+  // Brilho e contraste: valem na hora, ficam salvos e vão para o aparelho, que guarda para a tela de espera.
+  ipcMain.handle(
+    IPC_CHANNELS.applyDisplay,
+    trusted(async (brightness: unknown, contrast: unknown) => {
+      const level = (value: unknown) => {
+        if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 100) throw new Error("valor fora de 0 a 100");
+        return value;
+      };
+      const current = await configStore.load();
+      const saved = await configStore.save({ ...current, device: { ...current.device, brightness: level(brightness), contrast: level(contrast) } });
+      void device?.applyConfig(saved);
+      broadcast(IPC_CHANNELS.themeUpdated, saved.theme);
+      return callDevice(await deviceHost(), "/display", { brightness: String(saved.device.brightness), contrast: String(saved.device.contrast) });
+    }),
+  );
   ipcMain.handle(IPC_CHANNELS.resetDevice, trusted(async () => callDevice(await deviceHost(), "/reset", {})));
 
   ipcMain.on(IPC_CHANNELS.windowMinimize, (event) => {

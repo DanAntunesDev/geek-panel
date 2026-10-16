@@ -472,3 +472,39 @@ button {
   color: var(--mid);
   font-size: 8px;
 }
+
+/* Controle deslizante: trilho reto e botão quadrado, na cor de destaque. */
+.cfg-slider {
+  display: grid;
+  grid-template-columns: 150px 1fr 32px;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.cfg-slider span {
+  color: var(--mid);
+}
+
+.cfg-slider input[type="range"] {
+  appearance: none;
+  height: 8px;
+  margin: 0;
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.cfg-slider input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 18px;
+  background: var(--accent);
+  border: 2px solid var(--ink);
+  border-radius: 0;
+}
+
+.cfg-slider output {
+  text-align: right;
+}

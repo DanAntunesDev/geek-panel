@@ -11,6 +11,7 @@ export const IPC_CHANNELS = {
   testDevice: "device:test",
   pairDevice: "device:pair",
   resetDevice: "device:reset",
+  applyDisplay: "device:display",
   getDeviceLink: "device:link",
   deviceLinkUpdated: "device:link-updated",
   getDeviceState: "device:state",

@@ -150,6 +150,9 @@ export class WaitingRain {
     this.state = seed >>> 0 || 1;
     this.tick = 0;
     this.current = 255;
+    // sem mensagem escolhida ainda, as grades ficam vazias (como no aparelho)
+    this.target = Array.from({ length: ROWS }, () => Array(COLS).fill(""));
+    this.locked = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
     this.columns = Array.from({ length: COLS }, () => ({ head: 0, speed: 0, length: 0 }));
     for (const column of this.columns) this.respawn(column, true);
   }

@@ -44,3 +44,13 @@ export function themePalette(theme: ThemeConfig): string[] {
   const accent = theme.accent.toUpperCase();
   return [...DEVICE_PALETTE.slice(0, 4), accent, shadeOf(accent), ...themeColors(theme).map((color) => (color ?? DEVICE_PALETTE[3]).toUpperCase())];
 }
+
+// Mesma conta do contraste do aparelho: afasta cada canal do cinza médio. 50 não muda nada.
+export function applyContrast(hex: string, contrast: number): string {
+  const value = Number.parseInt(hex.slice(1), 16);
+  const channel = (shift: number) => {
+    const out = 128 + ((((value >> shift) & 0xff) - 128) * (50 + contrast)) / 100;
+    return Math.round(Math.min(255, Math.max(0, out))).toString(16).padStart(2, "0");
+  };
+  return `#${channel(16)}${channel(8)}${channel(0)}`.toUpperCase();
+}

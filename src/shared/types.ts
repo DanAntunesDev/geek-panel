@@ -90,6 +90,8 @@ export interface AppConfig {
     // Aceita o aparelho assim que ele aparecer na rede.
     autoConnect: boolean;
     brightness: number;
+    // 0 a 100; 50 deixa as cores como estão. Vale no próprio aparelho.
+    contrast: number;
     // Código que o aparelho precisa informar para receber as telas (vazio = qualquer um).
     pairingCode: string;
   };
