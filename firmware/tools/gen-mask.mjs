@@ -1,4 +1,4 @@
-// Desenha a máscara da tela de espera em pixel art e grava firmware/src/rain_mask.h.
+// Desenha a máscara da tela de espera em pixel art e grava firmware/src/rain_mask.h e src/shared/waitingMask.ts.
 // Uso: node firmware/tools/gen-mask.mjs [arquivo-de-prévia.png]
 import { crc32, deflateSync } from "node:zlib";
 import { writeFileSync } from "node:fs";
@@ -61,52 +61,79 @@ const both = (points, thick, color) => {
   stroke(mirror(points), thick, color);
 };
 
-// rosto: oval alto, de queixo arredondado
-const paintFace = (x, y) => {
-  if (inside(x, y)) face[y][x] = true;
+// As medidas vêm da imagem de referência (1000x1000, rosto de x 355 a 645 e y 285 a 715): X() e Y()
+// levam esses pontos para a grade de 120x120, com o rosto em 60 de largura e 90 de altura.
+const X = (rx) => 30 + (rx - 355) * (60 / 290);
+const Y = (ry) => 11 + (ry - 285) * (90 / 430);
+const map = (points) => points.map(([x, y]) => [Math.round(X(x)), Math.round(Y(y))]);
+const mirrored = (points) => points.map(([x, y]) => [1000 - x, y]);
+const drawBoth = (points, thick, color) => {
+  stroke(map(points), thick, color);
+  stroke(map(mirrored(points)), thick, color);
 };
-ellipse(60, 42, 29, 30, paintFace);
-polygon([[31, 44], [89, 44], [88, 62], [83, 77], [74, 91], [66, 98], [60, 100], [54, 98], [46, 91], [37, 77], [32, 62]], paintFace);
+const ovalBoth = (cx, cy, rx, ry, color) => {
+  ellipse(X(cx), Y(cy), rx * (60 / 290), ry * (90 / 430), (x, y) => set(x, y, color));
+  ellipse(X(1000 - cx), Y(cy), rx * (60 / 290), ry * (90 / 430), (x, y) => set(x, y, color));
+};
+
+// rosto: oval em formato de ovo, com o queixo afinando
+const half = [[500, 285], [455, 291], [412, 308], [380, 338], [362, 380], [357, 430], [358, 490], [364, 535], [376, 575], [392, 620], [414, 658], [445, 690], [478, 708], [500, 715]];
+polygon(map([...half, ...[...half].reverse().map(([x, y]) => [1000 - x, y])]), (x, y) => inside(x, y) && (face[y][x] = true));
 for (let y = 0; y < SIZE; y += 1) for (let x = 0; x < SIZE; x += 1) if (face[y][x]) grid[y][x] = WHITE;
 
-// rachaduras finas em cinza, sempre as mesmas (sequência fixa)
-let seed = 11;
+// riscos e falhas na pintura, em cinza claro, sempre os mesmos (sequência fixa)
+let seed = 7;
 const random = (limit) => {
   seed = (seed * 1103515245 + 12345) & 0x7fffffff;
   return seed % limit;
 };
-for (const [x0, y0, dx, dy] of [[34, 30, 1, 1], [86, 34, -1, 1], [40, 90, 1, -1], [80, 86, -1, -1], [60, 14, 0, 1], [88, 60, -1, 0], [32, 62, 1, 0]]) {
-  let x = x0;
-  let y = y0;
-  for (let step = 0; step < 9 + random(6); step += 1) {
-    if (inside(x, y) && face[y][x]) grid[y][x] = LIGHT;
-    x += dx + (random(3) - 1);
-    y += dy + (random(3) - 1);
+for (const [rx, ry, dx, dy] of [[392, 340, 1, 1], [610, 350, -1, 1], [380, 470, 1, 0], [615, 440, -1, 1], [450, 330, 0, 1], [540, 330, 1, 1], [420, 640, 1, -1], [585, 625, -1, -1]]) {
+  let x = X(rx);
+  let y = Y(ry);
+  for (let step = 0; step < 6 + random(6); step += 1) {
+    if (inside(Math.round(x), Math.round(y)) && face[Math.round(y)][Math.round(x)]) grid[Math.round(y)][Math.round(x)] = LIGHT;
+    x += dx + (random(3) - 1) * 0.6;
+    y += dy + (random(3) - 1) * 0.6;
   }
 }
 
-// sobrancelhas vermelhas, grossas e arqueadas
-both([[34, 40], [39, 33], [47, 30], [56, 33]], 4, RED);
-both([[34, 36], [39, 29], [47, 26], [56, 29]], 1, DARK_RED);
-// olhos: amêndoa branca com contorno preto, pupila e um traço preto vertical
-for (const cx of [46, 74]) {
-  ellipse(cx, 47, 8, 3, (x, y) => set(x, y, BLACK));
-  ellipse(cx, 47, 7, 2, (x, y) => set(x, y, WHITE));
-  ellipse(cx, 47, 3, 2, (x, y) => set(x, y, BLACK));
-}
-both([[41, 37], [39, 46], [40, 55]], 2, BLACK);
-// nariz: narinas e ponte
-both([[56, 52], [55, 62]], 1, GRAY);
-stroke([[53, 65], [56, 68], [60, 67], [64, 68], [67, 65]], 2, BLACK);
+// sobrancelhas vermelhas: dois arcos curtos e grossos no alto da testa
+drawBoth([[382, 408], [398, 394], [424, 388], [450, 393], [468, 406]], 3, RED);
+// olhos: aro vermelho em volta de uma fenda preta
+ovalBoth(437, 490, 38, 17, RED);
+ovalBoth(437, 490, 30, 10, BLACK);
+// cílios curtos, saindo do canto de fora
+drawBoth([[400, 484], [376, 478]], 1, RED);
+drawBoth([[398, 493], [372, 496]], 1, RED);
+drawBoth([[402, 502], [380, 512]], 1, RED);
+// arco preto em cima de cada olho e o traço vertical que atravessa o olho
+drawBoth([[376, 436], [398, 427], [424, 424], [452, 432], [480, 454]], 2, BLACK);
+drawBoth([[422, 428], [421, 490], [420, 548]], 2, BLACK);
 
-// sorriso vermelho largo, com uma linha preta no meio
-for (let x = 35; x <= 85; x += 1) {
-  const t = (x - 60) / 25;
-  const middle = 72 + 13 * (1 - t * t);
-  const half = 4.5 - 2 * Math.abs(t) * Math.abs(t);
-  for (let y = Math.round(middle - half); y <= Math.round(middle + half); y += 1) onFace(RED)(x, y);
-  onFace(BLACK)(x, Math.round(middle));
+// nariz: contorno fino, ponta e narinas
+drawBoth([[484, 520], [474, 556], [470, 578]], 1, GRAY);
+stroke(map([[462, 578], [480, 590], [500, 594], [520, 590], [538, 578]]), 2, BLACK);
+ovalBoth(478, 574, 8, 6, BLACK);
+
+// sorriso vermelho largo, de bochecha a bochecha, com duas linhas pretas dentro
+for (let rx = 380; rx <= 620; rx += 1) {
+  const t = (rx - 500) / 120;
+  const round = Math.sqrt(Math.max(0, 1 - t ** 8));
+  const top = 548 + 50 * (1 - t * t);
+  const bottom = 585 + 70 * (1 - t * t);
+  const middle = (top + bottom) / 2;
+  const reach = ((bottom - top) / 2) * round;
+  for (let ry = middle - reach; ry <= middle + reach; ry += 1) {
+    const x = Math.round(X(rx));
+    const y = Math.round(Y(ry));
+    if (inside(x, y) && face[y][x]) grid[y][x] = RED;
+  }
 }
+stroke(map([[402, 590], [430, 615], [470, 632], [500, 636], [530, 632], [570, 615], [598, 590]]), 2, BLACK);
+stroke(map([[440, 640], [470, 646], [500, 648], [530, 646], [560, 640]]), 1, BLACK);
+
+// dobras do tecido ao longo do queixo
+drawBoth([[385, 595], [402, 640], [430, 678], [470, 704]], 1, GRAY);
 
 // contorno cinza em volta do rosto
 for (let y = 0; y < SIZE; y += 1) {
@@ -134,9 +161,17 @@ static const uint8_t RAIN_MASK[${bytes.length}] PROGMEM = {${rows}
 `,
 );
 
+writeFileSync(
+  "src/shared/waitingMask.ts",
+  `// Gerado por firmware/tools/gen-mask.mjs. Não edite à mão.
+// Máscara da tela de espera (a mesma do firmware): 120x120, 4 bits por pixel, em base64.
+export const WAITING_MASK_BASE64 = "${Buffer.from(bytes).toString("base64")}";
+`,
+);
+
 const preview = process.argv[2];
 if (preview) {
-  const tones = [[247, 246, 243], [217, 215, 210], [120, 120, 119], [28, 28, 28], [224, 54, 46], [150, 34, 30]];
+  const tones = [[247, 246, 243], [217, 215, 210], [120, 120, 119], [28, 28, 28], [217, 66, 31], [140, 40, 20]];
   const scale = 4;
   const side = SIZE * scale;
   const raw = Buffer.alloc((side * 3 + 1) * side);
@@ -160,4 +195,4 @@ if (preview) {
   header.set([8, 2, 0, 0, 0], 8);
   writeFileSync(preview, Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", header), chunk("IDAT", deflateSync(raw)), chunk("IEND", Buffer.alloc(0))]));
 }
-console.log(`máscara gerada (${bytes.length} bytes) em firmware/src/rain_mask.h`);
+console.log(`máscara gerada (${bytes.length} bytes) em firmware/src/rain_mask.h e src/shared/waitingMask.ts`);
