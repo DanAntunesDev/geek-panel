@@ -122,13 +122,12 @@ for y in range(46, 72):
         if (x + y) % 2 == 0:
             paint(x, y, LIGHT)
 
-# olhos com um brilho, e uma sombrinha embaixo
+# uma sombrinha embaixo dos olhos
 for cx in (47, 73):
-    paint(cx - 3, 54, LIGHT, (BLACK,))
     for dx in range(-5, 6, 2):
         paint(cx + dx, 60, GRAY)
 
-# marcas de desgaste: riscos finos e pontinhos brancos na tinta vermelha
+# marcas de desgaste: riscos finos no rosto
 seed_value = 5
 def rnd(limit):
     global seed_value
@@ -142,10 +141,6 @@ for rx, ry, dx, dy in [(392, 340, 1, 1), (610, 350, -1, 1), (450, 330, 0, 1), (5
         paint(round(x), round(y), LIGHT)
         x += dx + (rnd(3) - 1) * 0.6
         y += dy + (rnd(3) - 1) * 0.6
-for y in range(SIZE):
-    for x in range(SIZE):
-        if grid[y][x] == RED and rnd(16) == 0:
-            grid[y][x] = WHITE
 
 # dobras do tecido ao longo do queixo
 line([(385, 595), (402, 640), (430, 678), (470, 704)], 1, GRAY)
