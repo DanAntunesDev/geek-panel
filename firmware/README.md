@@ -10,7 +10,7 @@ Testado em um aparelho só. Os pinos e as opções do display (inverter cores, l
 2. Manda um UDP em broadcast (porta 4602). O app responde com a porta TCP.
 3. Conecta, manda o código de pareamento e passa a receber os quadros.
 
-Enquanto não acha o app, mostra uma tela de espera animada (conectando, procurando, configurar Wi-Fi, código errado). Essas telas vêm de `art/waitingScene.ts`.
+Enquanto não acha o app, mostra uma chuva de letrinhas em preto, branco e cinza (`src/rain.cpp`), e a frase do momento vai sendo decifrada no meio delas, uma palavra por linha: conectando ao Wi-Fi, procurando o Geek Panel, configurar o Wi-Fi ou código errado. A chuva é calculada no próprio aparelho.
 
 A página do aparelho (`http://IP-DELE/`) tem Wi-Fi, IP do PC (opcional), código de pareamento, brilho, rotação e um padrão de teste. Com o código definido, as ações e o `/update` pedem usuário `admin` e esse código. O app também usa `/pair` para mandar o código sozinho e `/reset` para apagar o Wi-Fi e os ajustes (o botão "Apagar tudo e recomeçar" faz o mesmo).
 
@@ -23,13 +23,9 @@ pio run -e firmware    # painel completo
 pio run -e loader      # carregador mínimo (só Wi-Fi, página e atualização)
 ```
 
-O binário sai em `.pio/build/<env>/firmware.bin`. Para refazer as telas de espera:
+O binário sai em `.pio/build/<env>/firmware.bin`.
 
-```
-CHROME_PATH=<chromium> node firmware/tools/gen-waiting.mjs
-```
-
-O leitor de mensagens (`src/parser.cpp`) é testado no computador contra os bytes que o app gera: `yarn test` (precisa de `g++`).
+O leitor de mensagens (`src/parser.cpp`) e a chuva (`src/rain.cpp`) são testados no computador: `yarn test` (precisa de `g++`). O teste da chuva confere que ela só usa as quatro cores e que a mensagem é decifrada inteira.
 
 ## Gravar
 
