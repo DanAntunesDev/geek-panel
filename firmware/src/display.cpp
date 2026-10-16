@@ -49,7 +49,9 @@ void displayInit() {
   displayResetPalette();
 }
 
-void displayDraw() {
+// Desenha o quadro com a paleta dada. As telas de espera e o padrão de teste usam a de partida,
+// sem mexer na que o app mandou: um quadro de espera atrasado não pode apagar as cores do painel.
+static void drawFrame(const uint16_t* colors, uint8_t count) {
   static uint16_t line[SCREEN_SIZE];
   tft.startWrite();
   tft.setAddrWindow(0, 0, SCREEN_SIZE, SCREEN_SIZE);
@@ -58,7 +60,7 @@ void displayDraw() {
     for (uint16_t x = 0; x < FRAME_SIZE; x++) {
       uint32_t at = base + x;
       uint8_t index = (at & 1) ? (frameBuf[at >> 1] >> 4) : (frameBuf[at >> 1] & 0x0F);
-      uint16_t color = palette[index < paletteCount ? index : 0];
+      uint16_t color = colors[index < count ? index : 0];
       line[x * 2] = color;
       line[x * 2 + 1] = color;
     }
@@ -69,10 +71,11 @@ void displayDraw() {
   yield();
 }
 
+void displayDraw() { drawFrame(palette, paletteCount); }
+
 // Descomprime um quadro de espera (RLE em PROGMEM) para frameBuf.
 void displayWaiting(uint8_t state, uint32_t frame) {
   if (state >= WAIT_STATES) return;
-  displayResetPalette();
   uint8_t which = WAIT_FIRST_FRAME[state] + (frame % WAIT_FRAME_COUNT[state]);
   uint32_t at = pgm_read_dword(&WAIT_OFFSET[which]);
   uint32_t end = pgm_read_dword(&WAIT_OFFSET[which + 1]);
@@ -86,12 +89,11 @@ void displayWaiting(uint8_t state, uint32_t frame) {
       pixel++;
     }
   }
-  displayDraw();
+  drawFrame(DEFAULT_PALETTE, 6);
 }
 
 // Seis blocos, um por cor da paleta, para conferir inversão e ordem das cores.
 void displayTestPattern() {
-  displayResetPalette();
   for (uint32_t pixel = 0; pixel < FRAME_PIXELS; pixel++) {
     uint16_t x = pixel % FRAME_SIZE;
     uint16_t y = pixel / FRAME_SIZE;
@@ -100,5 +102,5 @@ void displayTestPattern() {
     if (pixel & 1) frameBuf[pixel >> 1] = (frameBuf[pixel >> 1] & 0x0F) | (index << 4);
     else frameBuf[pixel >> 1] = (frameBuf[pixel >> 1] & 0xF0) | index;
   }
-  displayDraw();
+  drawFrame(DEFAULT_PALETTE, 6);
 }
