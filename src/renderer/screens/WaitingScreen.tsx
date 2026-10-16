@@ -68,9 +68,7 @@ export function WaitingScreen() {
         <WaitingScene state={state} contrast={contrast} />
       </DeviceFrame>
       <div style={{ padding: "0 16px 16px", flexShrink: 0 }}>
-        <p className="cfg-note">
-          É isto que o aparelho mostra quando não acha o painel. No automático a frase acompanha o aparelho; os outros botões mostram cada situação.
-        </p>
+        <p className="cfg-note">O que o aparelho mostra sem o painel.</p>
         <Segmented
           label="Situação"
           value={choice}
