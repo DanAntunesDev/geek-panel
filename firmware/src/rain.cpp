@@ -7,11 +7,13 @@
 #else
 #define PROGMEM
 #define pgm_read_byte(address) (*(address))
-#define memcpy_P memcpy
 #endif
 #include "rain_mask.h"
 
 #define FRAME_SIZE 120
+#define BACKGROUND 3
+#define RED 4
+#define DARK_RED 5
 #define GLYPH_W 5
 #define GLYPH_H 7
 #define CELL_W 6
@@ -45,13 +47,17 @@ static const uint8_t LETTERS[26][GLYPH_H] = {
 static const uint8_t DOT[GLYPH_H] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x0C, 0x0C};
 static const uint8_t DASH[GLYPH_H] = {0x00, 0x00, 0x00, 0x1F, 0x00, 0x00, 0x00};
 
-// Uma palavra por linha, no meio da tela. A ordem é a de WAIT_* (wifi, painel, config, codigo).
-#define MESSAGE_LINES 4
+// Frase fixa no alto, acima da máscara; a última palavra sai em vermelho.
+#define TOP_PHRASE "NO SYSTEM IS SAFE"
+#define TOP_RED_FROM 13
+
+// Duas linhas no rodapé. A ordem é a de WAIT_* (wifi, painel, config, codigo).
+#define MESSAGE_LINES 2
 static const char* const MESSAGES[RAIN_MESSAGES][MESSAGE_LINES] = {
-    {"CONECTANDO", "AO WI-FI...", "", ""},
-    {"PROCURANDO", "GEEK PANEL...", "", "ABRA NO PC"},
-    {"CONFIGURAR", "WI-FI NA REDE", "GEEKPANEL", "192.168.4.1"},
-    {"CODIGO DE", "PAREAMENTO", "NAO CONFERE", "VEJA NA CONFIG"},
+    {"CONECTANDO AO", "WI-FI..."},
+    {"PROCURANDO GEEK", "PANEL... ABRA NO PC"},
+    {"REDE GEEKPANEL", "ABRA 192.168.4.1"},
+    {"CODIGO DE PAREAMENTO", "NAO CONFERE"},
 };
 
 struct Column {
@@ -111,24 +117,27 @@ void rainMessage(uint8_t message) {
   phase = DECODE;
   phaseTick = 0;
 
-  int lines = 0;
-  for (int i = 0; i < MESSAGE_LINES; i++) {
-    if (MESSAGES[message][i][0]) lines++;
+  // a frase do alto fica na primeira linha, centralizada
+  const char* top = TOP_PHRASE;
+  int topLength = 0;
+  while (top[topLength]) topLength++;
+  for (int k = 0; k < topLength; k++) {
+    if (top[k] == ' ') continue;
+    target[0][(RAIN_COLS - topLength) / 2 + k] = top[k];
+    total++;
   }
-  // as linhas ficam coladas embaixo, no rodapé, para a máscara e a chuva aparecerem acima
-  int row = RAIN_ROWS - lines;
+
+  // as duas linhas de status ficam coladas embaixo, no rodapé
   for (int i = 0; i < MESSAGE_LINES; i++) {
     const char* text = MESSAGES[message][i];
     int length = 0;
     while (text[length]) length++;
-    if (!length) continue;
     int left = (RAIN_COLS - length) / 2;
     for (int k = 0; k < length; k++) {
       if (text[k] == ' ') continue;
-      target[row][left + k] = text[k];
+      target[RAIN_ROWS - MESSAGE_LINES + i][left + k] = text[k];
       total++;
     }
-    row += 1;
   }
 }
 
@@ -143,10 +152,11 @@ static void put(uint8_t* frame, int x, int y, uint8_t color) {
 
 // Letra com relevo: uma sombra cinza um pixel para baixo e para a direita, que cabe na própria célula.
 static void draw(uint8_t* frame, int column, int row, const uint8_t* bits, uint8_t color) {
-  if (color <= 1) {
+  if (color <= 1 || color == RED) {
+    uint8_t shadow = color == RED ? DARK_RED : 2;
     for (int y = 0; y < GLYPH_H; y++) {
       for (int x = 0; x < GLYPH_W; x++) {
-        if (bits[y] & (1 << (GLYPH_W - 1 - x))) put(frame, column * CELL_W + x + 1, row * CELL_H + y + 1, 2);
+        if (bits[y] & (1 << (GLYPH_W - 1 - x))) put(frame, column * CELL_W + x + 1, row * CELL_H + y + 1, shadow);
       }
     }
   }
@@ -168,16 +178,13 @@ static void showMessage(uint8_t* frame) {
   for (int r = 0; r < RAIN_ROWS; r++) {
     for (int c = 0; c < RAIN_COLS; c++) {
       if (!locked[r][c]) continue;
-      // a chuva que passou por baixo da letra sai e a máscara volta
+      // a chuva que passou por baixo da letra sai
       for (int y = 0; y < CELL_H; y++) {
-        for (int x = 0; x < CELL_W; x++) {
-          uint32_t at = (uint32_t)(r * CELL_H + y) * FRAME_SIZE + c * CELL_W + x;
-          uint8_t pair = pgm_read_byte(&RAIN_MASK[at >> 1]);
-          put(frame, c * CELL_W + x, r * CELL_H + y, (at & 1) ? pair >> 4 : pair & 0x0F);
-        }
+        for (int x = 0; x < CELL_W; x++) put(frame, c * CELL_W + x, r * CELL_H + y, BACKGROUND);
       }
       bool glitch = phase == HOLD && next(100) == 0;
-      draw(frame, c, r, glitch ? GLYPHS[next(GLYPH_COUNT)] : bitmapFor(target[r][c]), 0);
+      uint8_t color = r == 0 && c >= TOP_RED_FROM ? RED : 0;
+      draw(frame, c, r, glitch ? GLYPHS[next(GLYPH_COUNT)] : bitmapFor(target[r][c]), color);
     }
   }
 }
@@ -213,8 +220,18 @@ static void advancePhase() {
   }
 }
 
+// A máscara fica na frente da chuva; o índice 15 dela é transparente.
+static void showMask(uint8_t* frame) {
+  for (uint32_t i = 0; i < sizeof(RAIN_MASK); i++) {
+    uint8_t pair = pgm_read_byte(&RAIN_MASK[i]);
+    if (pair == 0xFF) continue;
+    if ((pair & 0x0F) != 15) frame[i] = (frame[i] & 0xF0) | (pair & 0x0F);
+    if ((pair >> 4) != 15) frame[i] = (frame[i] & 0x0F) | (pair & 0xF0);
+  }
+}
+
 void rainStep(uint8_t* frame) {
-  memcpy_P(frame, RAIN_MASK, sizeof(RAIN_MASK));
+  memset(frame, (BACKGROUND << 4) | BACKGROUND, FRAME_SIZE * FRAME_SIZE / 2);
   tick++;
 
   for (int c = 0; c < RAIN_COLS; c++) {
@@ -240,5 +257,6 @@ void rainStep(uint8_t* frame) {
     }
   }
   showMessage(frame);
+  showMask(frame);
   advancePhase();
 }

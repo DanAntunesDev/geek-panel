@@ -80,25 +80,27 @@ int main() {
     }
     if (!decodedAt && rainLocked() == rainTotal()) decodedAt = n;
   }
-  printf("%u %u %u %u %u %u %u %u\\n", counts[0], counts[1], counts[2], counts[3], counts[4] + counts[5] + counts[15], changed > 0, decodedAt, rainTotal());
+  printf("%u %u %u %u %u %u %u %u %u\\n", counts[0], counts[1], counts[2], counts[3], counts[4] + counts[5], counts[15], changed > 0, decodedAt, rainTotal());
 }`;
 
-  it("só usa preto, branco e os dois cinzas, anima, tem a máscara ao fundo e decifra a mensagem inteira", () => {
+  it("usa só as cores da tela de espera, anima, tem a máscara na frente e decifra a mensagem inteira", () => {
     writeFileSync(path.join(work, "rain_test.cpp"), source);
     const binary = path.join(work, "rain_test");
     execFileSync("g++", ["-std=c++17", "-Wall", "-Wextra", "-Werror", "-Ifirmware/src", "-o", binary, path.join(work, "rain_test.cpp"), "firmware/src/rain.cpp"]);
-    const [white, light, gray, black, other, animated, decodedAt, total] = execFileSync(binary).toString().trim().split(" ").map(Number);
-    expect(other).toBe(0);
+    const [white, light, gray, black, red, transparent, animated, decodedAt, total] = execFileSync(binary).toString().trim().split(" ").map(Number);
+    // o índice 15 (transparente) só existe na máscara e nunca chega ao quadro; o vermelho é da máscara e do "SAFE"
+    expect(transparent).toBe(0);
+    expect(red).toBeGreaterThan(0);
     expect(animated).toBe(1);
     expect(white).toBeGreaterThan(0);
     expect(light).toBeGreaterThan(0);
     expect(gray).toBeGreaterThan(0);
-    // "PROCURANDO", "GEEK PANEL..." e "ABRA NO PC" sem os espaços
-    expect(total).toBe(10 + 12 + 8);
+    // "NO SYSTEM IS SAFE", "PROCURANDO GEEK" e "PANEL... ABRA NO PC", sem os espaços
+    expect(total).toBe(14 + 14 + 16);
     // a chuva decifra tudo antes do tempo limite, sem precisar do empurrão final
     expect(decodedAt).toBeGreaterThan(0);
     expect(decodedAt).toBeLessThanOrEqual(220);
-    // a máscara ao fundo é cinza e preta; o branco e o cinza claro (letras e luzes) ficam em minoria
-    expect(black).toBeGreaterThan(white + light);
+    // há fundo preto de sobra em volta da máscara
+    expect(black).toBeGreaterThan(white / 2);
   });
 });

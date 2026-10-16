@@ -9,6 +9,8 @@ uint8_t frameBuf[FRAME_BYTES];
 
 // Cores de partida (bg, surface, mid, ink, accent, accentShade) em RGB565, até o app mandar as dele.
 static const uint16_t DEFAULT_PALETTE[6] = {0xF7BE, 0xDEBA, 0x7BCE, 0x18E3, 0xE9B1, 0xA12D};
+// Cores da tela de espera: branco, dois cinzas, preto e dois vermelhos (a máscara e o "SAFE").
+static const uint16_t WAITING_PALETTE[6] = {0xF7BE, 0xDEBA, 0x7BCE, 0x18E3, 0xE1A5, 0x9103};
 static uint16_t palette[16];
 static uint8_t paletteCount = 6;
 
@@ -78,7 +80,7 @@ void displayDraw() { drawFrame(palette, paletteCount); }
 void displayWaiting(uint8_t state) {
   rainMessage(state);
   rainStep(frameBuf);
-  drawFrame(DEFAULT_PALETTE, 6);
+  drawFrame(WAITING_PALETTE, 6);
 }
 
 // Seis blocos, um por cor da paleta, para conferir inversão e ordem das cores.
