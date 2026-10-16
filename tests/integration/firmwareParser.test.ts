@@ -83,7 +83,7 @@ int main() {
   printf("%u %u %u %u %u %u %u %u\\n", counts[0], counts[1], counts[2], counts[3], counts[4] + counts[5] + counts[15], changed > 0, decodedAt, rainTotal());
 }`;
 
-  it("só usa preto, branco e os dois cinzas, anima e decifra a mensagem inteira", () => {
+  it("só usa preto, branco e os dois cinzas, anima, tem a máscara ao fundo e decifra a mensagem inteira", () => {
     writeFileSync(path.join(work, "rain_test.cpp"), source);
     const binary = path.join(work, "rain_test");
     execFileSync("g++", ["-std=c++17", "-Wall", "-Wextra", "-Werror", "-Ifirmware/src", "-o", binary, path.join(work, "rain_test.cpp"), "firmware/src/rain.cpp"]);
@@ -98,7 +98,7 @@ int main() {
     // a chuva decifra tudo antes do tempo limite, sem precisar do empurrão final
     expect(decodedAt).toBeGreaterThan(0);
     expect(decodedAt).toBeLessThanOrEqual(220);
-    // o fundo preto domina: é chuva, não uma parede de letras
-    expect(black).toBeGreaterThan((white + light + gray) * 3);
+    // a máscara ao fundo é cinza e preta; o branco e o cinza claro (letras e luzes) ficam em minoria
+    expect(black).toBeGreaterThan(white + light);
   });
 });

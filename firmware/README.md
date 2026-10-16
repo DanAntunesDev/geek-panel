@@ -10,7 +10,7 @@ Testado em um aparelho só. Os pinos e as opções do display (inverter cores, l
 2. Manda um UDP em broadcast (porta 4602). O app responde com a porta TCP.
 3. Conecta, manda o código de pareamento e passa a receber os quadros.
 
-Enquanto não acha o app, mostra uma chuva de letrinhas em preto, branco e cinza (`src/rain.cpp`), e a frase do momento vai sendo decifrada no meio delas, uma palavra por linha: conectando ao Wi-Fi, procurando o Geek Panel, configurar o Wi-Fi ou código errado. A chuva é calculada no próprio aparelho.
+Enquanto não acha o app, mostra uma chuva de letrinhas em preto, branco e cinza (`src/rain.cpp`) sobre uma máscara de V de Vingança ao fundo (`src/rain_mask.h`). As letras têm um relevo cinza e, embaixo, no rodapé, a frase do momento vai sendo decifrada, uma palavra por linha: conectando ao Wi-Fi, procurando o Geek Panel, configurar o Wi-Fi ou código errado. A chuva é calculada no próprio aparelho; a máscara é um desenho de 120x120 gerado por `node firmware/tools/gen-mask.mjs`.
 
 A página do aparelho (`http://IP-DELE/`) tem Wi-Fi, IP do PC (opcional), código de pareamento, brilho, rotação e um padrão de teste. Com o código definido, as ações e o `/update` pedem usuário `admin` e esse código. O app também usa `/pair` para mandar o código sozinho e `/reset` para apagar o Wi-Fi e os ajustes (o botão "Apagar tudo e recomeçar" faz o mesmo).
 

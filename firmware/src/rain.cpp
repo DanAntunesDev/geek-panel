@@ -1,11 +1,21 @@
 #include "rain.h"
+#include <string.h>
+
+// No aparelho a máscara fica na memória de programa; no computador (testes) é um vetor comum.
+#ifdef ARDUINO
+#include <pgmspace.h>
+#else
+#define PROGMEM
+#define pgm_read_byte(address) (*(address))
+#define memcpy_P memcpy
+#endif
+#include "rain_mask.h"
 
 #define FRAME_SIZE 120
 #define GLYPH_W 5
 #define GLYPH_H 7
 #define CELL_W 6
 #define CELL_H 8
-#define BACKGROUND 3
 
 // Letrinhas 5x7: números e uns símbolos que lembram katakana. Cada linha é um número de 5 bits.
 static const uint8_t GLYPHS[][GLYPH_H] = {
@@ -105,9 +115,8 @@ void rainMessage(uint8_t message) {
   for (int i = 0; i < MESSAGE_LINES; i++) {
     if (MESSAGES[message][i][0]) lines++;
   }
-  // as linhas ocupam o meio da tela, com uma linha de folga entre elas
-  int top = (RAIN_ROWS - (lines * 2 - 1)) / 2;
-  int row = top;
+  // as linhas ficam coladas embaixo, no rodapé, para a máscara e a chuva aparecerem acima
+  int row = RAIN_ROWS - lines;
   for (int i = 0; i < MESSAGE_LINES; i++) {
     const char* text = MESSAGES[message][i];
     int length = 0;
@@ -119,7 +128,7 @@ void rainMessage(uint8_t message) {
       target[row][left + k] = text[k];
       total++;
     }
-    row += 2;
+    row += 1;
   }
 }
 
@@ -132,7 +141,15 @@ static void put(uint8_t* frame, int x, int y, uint8_t color) {
   cell = (at & 1) ? (uint8_t)((cell & 0x0F) | (color << 4)) : (uint8_t)((cell & 0xF0) | color);
 }
 
+// Letra com relevo: uma sombra cinza um pixel para baixo e para a direita, que cabe na própria célula.
 static void draw(uint8_t* frame, int column, int row, const uint8_t* bits, uint8_t color) {
+  if (color <= 1) {
+    for (int y = 0; y < GLYPH_H; y++) {
+      for (int x = 0; x < GLYPH_W; x++) {
+        if (bits[y] & (1 << (GLYPH_W - 1 - x))) put(frame, column * CELL_W + x + 1, row * CELL_H + y + 1, 2);
+      }
+    }
+  }
   for (int y = 0; y < GLYPH_H; y++) {
     for (int x = 0; x < GLYPH_W; x++) {
       if (bits[y] & (1 << (GLYPH_W - 1 - x))) put(frame, column * CELL_W + x, row * CELL_H + y, color);
@@ -151,8 +168,13 @@ static void showMessage(uint8_t* frame) {
   for (int r = 0; r < RAIN_ROWS; r++) {
     for (int c = 0; c < RAIN_COLS; c++) {
       if (!locked[r][c]) continue;
+      // a chuva que passou por baixo da letra sai e a máscara volta
       for (int y = 0; y < CELL_H; y++) {
-        for (int x = 0; x < CELL_W; x++) put(frame, c * CELL_W + x, r * CELL_H + y, BACKGROUND);
+        for (int x = 0; x < CELL_W; x++) {
+          uint32_t at = (uint32_t)(r * CELL_H + y) * FRAME_SIZE + c * CELL_W + x;
+          uint8_t pair = pgm_read_byte(&RAIN_MASK[at >> 1]);
+          put(frame, c * CELL_W + x, r * CELL_H + y, (at & 1) ? pair >> 4 : pair & 0x0F);
+        }
       }
       bool glitch = phase == HOLD && next(100) == 0;
       draw(frame, c, r, glitch ? GLYPHS[next(GLYPH_COUNT)] : bitmapFor(target[r][c]), 0);
@@ -192,7 +214,7 @@ static void advancePhase() {
 }
 
 void rainStep(uint8_t* frame) {
-  for (uint32_t i = 0; i < (uint32_t)FRAME_SIZE * FRAME_SIZE / 2; i++) frame[i] = (BACKGROUND << 4) | BACKGROUND;
+  memcpy_P(frame, RAIN_MASK, sizeof(RAIN_MASK));
   tick++;
 
   for (int c = 0; c < RAIN_COLS; c++) {
