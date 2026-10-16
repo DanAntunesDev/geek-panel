@@ -35,6 +35,7 @@ const autostartDeps = (): AutostartDeps => ({
   execPath: process.execPath,
   appPath: app.getAppPath(),
   appImage: process.env.APPIMAGE,
+  portableExe: process.env.PORTABLE_EXECUTABLE_FILE,
   setLoginItem: (settings) => app.setLoginItemSettings(settings),
 });
 

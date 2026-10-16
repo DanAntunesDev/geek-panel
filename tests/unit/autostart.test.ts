@@ -64,6 +64,12 @@ describe("installLinuxLauncher", () => {
 });
 
 describe("applyAutostart (Windows)", () => {
+  it("na versão portátil aponta para o executável de verdade", async () => {
+    const setLoginItem = vi.fn();
+    await applyAutostart(true, { platform: "win32", isPackaged: true, execPath: "C:\\Temp\\x.exe", appPath: "", portableExe: "D:\\GeekPanel.exe", setLoginItem });
+    expect(setLoginItem).toHaveBeenCalledWith({ openAtLogin: true, args: ["--hidden"], path: "D:\\GeekPanel.exe" });
+  });
+
   it("registra a entrada do sistema com o parâmetro de abrir escondido", async () => {
     const setLoginItem = vi.fn();
     await applyAutostart(true, { platform: "win32", isPackaged: true, execPath: "C:\\x.exe", appPath: "", setLoginItem });

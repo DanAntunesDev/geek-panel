@@ -10,7 +10,9 @@ export interface AutostartDeps {
   home?: string;
   appImage?: string;
   // Windows e macOS: o próprio Electron cuida da entrada de inicialização.
-  setLoginItem?: (settings: { openAtLogin: boolean; args: string[] }) => void;
+  setLoginItem?: (settings: { openAtLogin: boolean; args: string[]; path?: string }) => void;
+  // Windows, versão portátil: o executável de verdade (o do processo fica numa pasta temporária).
+  portableExe?: string;
 }
 
 export const HIDDEN_FLAG = "--hidden";
@@ -59,5 +61,5 @@ export async function applyAutostart(enabled: boolean, deps: AutostartDeps): Pro
     return;
   }
   // em desenvolvimento o executável seria o do Electron solto: não registra
-  if (deps.isPackaged) deps.setLoginItem?.({ openAtLogin: enabled, args: [HIDDEN_FLAG] });
+  if (deps.isPackaged) deps.setLoginItem?.({ openAtLogin: enabled, args: [HIDDEN_FLAG], ...(deps.portableExe ? { path: deps.portableExe } : {}) });
 }
