@@ -1,4 +1,6 @@
-// Tipos compartilhados entre processo principal, renderer e servidor local.
+// Tipos compartilhados entre o processo principal e o renderer.
+
+import type { ReminderSoundId } from "./sounds.js";
 
 // Cores em #RRGGBB; null deixa a tela com o visual original.
 export interface ThemeConfig {
@@ -121,6 +123,15 @@ export interface AppConfig {
     notify: boolean;
     // Aplicativo Google só da agenda; pode ser de outra conta que a do YouTube.
     googleClientId: string;
+    // Som tocado quando um lembrete dispara.
+    sound: {
+      enabled: boolean;
+      id: ReminderSoundId;
+      // 0 a 100
+      volume: number;
+      // Saída de áudio escolhida; vazio usa a padrão do sistema.
+      deviceId: string;
+    };
   };
   media: {
     // Detecta o que está tocando nos players abertos nesta máquina.

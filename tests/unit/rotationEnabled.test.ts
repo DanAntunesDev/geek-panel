@@ -15,3 +15,19 @@ describe("telas no rodízio", () => {
     expect(() => validateConfig({ rotation: { enabled: off } })).toThrow(/pelo menos uma tela/);
   });
 });
+
+describe("som do lembrete", () => {
+  it("vem ligado, com o som pixel", () => {
+    expect(validateConfig({}).agenda.sound).toEqual({ enabled: true, id: "pixel", volume: 70, deviceId: "" });
+  });
+
+  it("aceita trocar som, volume e saída", () => {
+    const sound = validateConfig({ agenda: { sound: { id: "bell", volume: 30, deviceId: "abc" } } }).agenda.sound;
+    expect(sound).toMatchObject({ id: "bell", volume: 30, deviceId: "abc" });
+  });
+
+  it("recusa som que não existe e volume fora da faixa", () => {
+    expect(() => validateConfig({ agenda: { sound: { id: "outro" } } })).toThrow(/som do lembrete/);
+    expect(() => validateConfig({ agenda: { sound: { volume: 150 } } })).toThrow(/som do lembrete/);
+  });
+});

@@ -4,6 +4,7 @@
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { BUILTIN_PROVIDERS, PROVIDER_ID_PATTERN } from "../shared/providers.js";
+import { isReminderSound } from "../shared/sounds.js";
 import { ACCENT_PATTERN, DEFAULT_THEME } from "../shared/theme.js";
 import type { AppConfig, ProviderSpec, StreamingServiceId } from "../shared/types.js";
 
@@ -40,6 +41,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     reminders: [10, 5],
     notify: true,
     googleClientId: "",
+    sound: { enabled: true, id: "pixel", volume: 70, deviceId: "" },
   },
   media: {
     systemPlayers: true,
@@ -100,7 +102,7 @@ export function validateConfig(input: unknown): AppConfig {
       clock: { ...DEFAULT_CONFIG.theme.clock, ...candidate.theme?.clock },
     },
     app: { ...DEFAULT_CONFIG.app, ...candidate.app },
-    agenda: { ...DEFAULT_CONFIG.agenda, ...candidate.agenda },
+    agenda: { ...DEFAULT_CONFIG.agenda, ...candidate.agenda, sound: { ...DEFAULT_CONFIG.agenda.sound, ...candidate.agenda?.sound } },
     clock: { ...DEFAULT_CONFIG.clock, ...candidate.clock },
     media: {
       ...DEFAULT_CONFIG.media,
@@ -298,6 +300,18 @@ function validateAgenda(agenda: AppConfig["agenda"]): void {
   }
   if (typeof agenda.googleClientId !== "string" || !CLIENT_ID_PATTERN.test(agenda.googleClientId)) {
     throw new ConfigValidationError("ID do aplicativo Google da agenda inválido");
+  }
+  const { sound } = agenda;
+  if (
+    typeof sound.enabled !== "boolean" ||
+    !isReminderSound(sound.id) ||
+    !Number.isInteger(sound.volume) ||
+    sound.volume < 0 ||
+    sound.volume > 100 ||
+    typeof sound.deviceId !== "string" ||
+    sound.deviceId.length > 256
+  ) {
+    throw new ConfigValidationError("som do lembrete inválido");
   }
   const { reminders } = agenda;
   const valid =
