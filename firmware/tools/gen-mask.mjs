@@ -61,43 +61,54 @@ const both = (points, thick, color) => {
 const paintFace = (x, y) => {
   if (inside(x, y)) face[y][x] = true;
 };
-ellipse(60, 33, 30, 31, paintFace);
-polygon([[30, 36], [90, 36], [89, 52], [84, 66], [75, 77], [66, 84], [60, 87], [54, 84], [45, 77], [36, 66], [31, 52]], paintFace);
+ellipse(60, 34, 31, 31, paintFace);
+polygon([[29, 36], [91, 36], [90, 52], [85, 65], [76, 76], [67, 83], [60, 86], [53, 83], [44, 76], [35, 65], [30, 52]], paintFace);
 
-// preenchimento: xadrez de cinza e preto, para parecer um tom escuro e deixar a chuva aparecer
-for (let y = 0; y < SIZE; y += 1) for (let x = 0; x < SIZE; x += 1) if (face[y][x]) grid[y][x] = (x + y) % 2 === 0 ? GRAY : BLACK;
+// preenchimento cinza liso; a borda ganha um xadrez escuro para dar volume
+const eroded = (depth) => {
+  let current = face.map((row) => [...row]);
+  for (let step = 0; step < depth; step += 1) {
+    current = current.map((row, y) => row.map((on, x) => on && face[y]?.[x] && current[y - 1]?.[x] && current[y + 1]?.[x] && current[y][x - 1] && current[y][x + 1]));
+  }
+  return current;
+};
+const core = eroded(5);
+for (let y = 0; y < SIZE; y += 1) {
+  for (let x = 0; x < SIZE; x += 1) {
+    if (face[y][x]) grid[y][x] = core[y][x] ? GRAY : (x + y) % 2 === 0 ? GRAY : BLACK;
+  }
+}
 
-// luzes: testa, maçãs do rosto, ponte do nariz
-ellipse(60, 15, 15, 5, (x, y) => face[y][x] && set(x, y, (x + y) % 2 === 0 ? LIGHT : GRAY));
-ellipse(40, 54, 9, 7, (x, y) => face[y][x] && set(x, y, (x + y) % 2 === 0 ? LIGHT : GRAY));
-ellipse(80, 54, 9, 7, (x, y) => face[y][x] && set(x, y, (x + y) % 2 === 0 ? LIGHT : GRAY));
-stroke([[60, 36], [59, 50], [58, 58]], 2, LIGHT);
+// luzes: testa, maçãs do rosto (com um brilho branco) e ponte do nariz
+ellipse(60, 13, 14, 4, (x, y) => face[y][x] && set(x, y, LIGHT));
+for (const cx of [40, 80]) {
+  ellipse(cx, 53, 8, 6, (x, y) => set(x, y, LIGHT));
+  stroke([[cx - 4, 50], [cx - 2, 48]], 2, WHITE);
+}
+stroke([[60, 38], [59, 50], [58, 59]], 2, LIGHT);
 
-// sobrancelhas grossas e levantadas nas pontas de dentro
-both([[34, 28], [41, 20], [50, 19], [57, 24]], 1, LIGHT);
-both([[34, 31], [41, 23], [50, 22], [57, 27]], 4, BLACK);
-// olhos estreitos, com a pálpebra e a bolsa embaixo
-both([[37, 36], [45, 33], [54, 36]], 2, BLACK);
-ellipse(45, 37, 7, 2, (x, y) => set(x, y, BLACK));
-ellipse(75, 37, 7, 2, (x, y) => set(x, y, BLACK));
-both([[39, 42], [45, 44], [52, 42]], 1, GRAY);
+// sobrancelhas finas e muito arqueadas, com um fio claro por cima
+both([[32, 26], [39, 17], [49, 15], [57, 20]], 1, LIGHT);
+both([[32, 29], [39, 20], [49, 18], [57, 23]], 4, BLACK);
+// olhos: uma fenda estreita, com a pálpebra clara em cima
+both([[36, 33], [46, 30], [55, 33]], 1, LIGHT);
+polygon([[36, 37], [46, 33], [55, 37], [46, 40]], (x, y) => set(x, y, BLACK));
+polygon([[84, 37], [74, 33], [65, 37], [74, 40]], (x, y) => set(x, y, BLACK));
 
-// nariz: sombra embaixo e narinas
-stroke([[55, 61], [60, 63], [65, 61]], 2, BLACK);
-ellipse(56, 62, 1, 1, (x, y) => set(x, y, BLACK));
-ellipse(64, 62, 1, 1, (x, y) => set(x, y, BLACK));
+// nariz: narinas escuras
+stroke([[54, 62], [57, 65], [60, 64], [63, 65], [66, 62]], 2, BLACK);
 
-// bigode fino, com as pontas viradas para cima
-both([[60, 71], [52, 73], [43, 71], [37, 64], [35, 58]], 1, LIGHT);
-both([[60, 68], [52, 70], [43, 68], [37, 61], [35, 55]], 3, BLACK);
+// bigode grande, com as pontas virando para cima até as bochechas
+both([[60, 71], [51, 73], [43, 71], [36, 64], [32, 54], [33, 46]], 1, LIGHT);
+both([[60, 68], [51, 70], [43, 68], [37, 61], [35, 52], [36, 46]], 4, BLACK);
 // sorriso largo e o lábio de baixo
-stroke([[44, 73], [52, 77], [60, 78], [68, 77], [76, 73]], 2, BLACK);
-stroke([[49, 80], [60, 82], [71, 80]], 1, LIGHT);
+stroke([[41, 74], [50, 78], [60, 79], [70, 78], [79, 74]], 3, BLACK);
+stroke([[48, 81], [60, 83], [72, 81]], 1, LIGHT);
 // cavanhaque
-polygon([[55, 83], [65, 83], [62, 92], [58, 92]], (x, y) => set(x, y, LIGHT));
-polygon([[56, 83], [64, 83], [61, 91], [59, 91]], (x, y) => set(x, y, BLACK));
+polygon([[54, 82], [66, 82], [63, 92], [57, 92]], (x, y) => set(x, y, LIGHT));
+polygon([[56, 83], [64, 83], [62, 90], [58, 90]], (x, y) => set(x, y, BLACK));
 
-// contorno cinza em volta do rosto
+// contorno claro em volta do rosto
 const edge = [];
 for (let y = 0; y < SIZE; y += 1) {
   for (let x = 0; x < SIZE; x += 1) {
