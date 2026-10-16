@@ -38,9 +38,9 @@ O painel só aparece no aparelho com o computador e o app ligados. Em Config dá
 
 ## Windows
 
-O app roda igual no Linux e no Windows. Ainda não testei no Windows, então o primeiro teste lá é o que falta.
+O app roda igual no Linux e no Windows. Ainda não testei no Windows: os testes automáticos rodam só no Linux, então o primeiro teste lá é o que falta.
 
-**Instalador:** a cada tag `v*` (ou rodando o workflow `release` à mão na aba Actions) o GitHub compila no Windows e gera o instalador (`geek-panel-<versão>-win.exe`) e uma versão portátil, que abre sem instalar. Os arquivos saem em Actions > release > Artifacts, ou em Releases quando for uma tag. Não são assinados, então o Windows avisa "editor desconhecido" na primeira vez.
+**Instalador:** a cada tag `v*` (ou rodando o workflow `release` à mão na aba Actions) o GitHub compila no Windows e gera o instalador (`geek-panel-setup-<versão>.exe`) e uma versão portátil (`geek-panel-portable-<versão>.exe`), que abre sem instalar. Os arquivos saem em Actions > release > Artifacts, ou em Releases quando for uma tag. Não são assinados, então o Windows avisa "editor desconhecido" na primeira vez.
 
 **Direto pelo terminal**, sem VS Code. Precisa só do [Node.js](https://nodejs.org) 20 ou mais novo:
 
@@ -55,9 +55,9 @@ Ou, com Node e Yarn já instalados: `yarn` e depois `yarn start` (abre o app) ou
 
 O que muda no Windows:
 
-- A conexão com o aparelho abre as portas 4601 (TCP) e 4602 (UDP). Na primeira vez o Firewall pergunta; libere para redes privadas.
+- A conexão com o aparelho abre as portas 4601 (TCP) e 4602 (UDP). Na primeira vez o Firewall pergunta; libere para redes privadas. Se a pergunta não aparecer, ou você respondeu "cancelar", rode como administrador `powershell -ExecutionPolicy Bypass -File scripts\windows-firewall.ps1` (e `-Remove` para desfazer).
 - Segredos e logins ficam no cofre de cada sistema (libsecret no Linux, DPAPI no Windows), então não passam de um sistema para o outro: no Windows é preciso conectar de novo.
-- Ler o que está tocando nos players do computador só funciona no Linux por enquanto. Spotify e YouTube funcionam nos dois.
+- Os players do computador (Spotify, navegador...) são lidos pela API de mídia do Windows, com o PowerShell que já vem no sistema. Dá para pausar, pular e mexer no tempo; o volume desses players não, só o do Spotify e o do YouTube pelo painel. Essa parte nunca rodou num Windows de verdade.
 
 ## Segurança
 
