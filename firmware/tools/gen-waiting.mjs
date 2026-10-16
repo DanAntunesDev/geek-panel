@@ -1,4 +1,4 @@
-// Gera firmware/src/waiting_frames.h com as telas de espera (RLE, na paleta do aparelho).
+// Gera firmware/src/waiting_frames.h com a caixa de texto da tela de espera (RLE, na paleta do aparelho).
 // Uso: CHROME_PATH=<chromium> node firmware/tools/gen-waiting.mjs [pasta-da-prévia]
 import { build } from "esbuild";
 import { chromium } from "playwright-core";
@@ -27,7 +27,15 @@ for (const state of states) {
       ({ name, frame }) => {
         const ctx = document.getElementById("c").getContext("2d");
         Waiting.drawWaiting(ctx, name, frame);
-        return Array.from(Waiting.toIndexed(ctx.getImageData(0, 0, 120, 120).data));
+        const rgba = ctx.getImageData(0, 0, 120, 120).data;
+        const indexed = Array.from(Waiting.toIndexed(rgba));
+        // índice 15 = transparente: deixa a chuva aparecer
+        const key = Waiting.TRANSPARENT;
+        const magic = [1, 3, 5].map((at) => Number.parseInt(key.slice(at, at + 2), 16));
+        for (let pixel = 0; pixel < indexed.length; pixel += 1) {
+          if (rgba[pixel * 4] === magic[0] && rgba[pixel * 4 + 1] === magic[1] && rgba[pixel * 4 + 2] === magic[2]) indexed[pixel] = 15;
+        }
+        return indexed;
       },
       { name: state.name, frame },
     );

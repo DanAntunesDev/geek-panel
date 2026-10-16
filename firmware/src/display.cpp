@@ -1,6 +1,7 @@
 #include "display.h"
 #include <TFT_eSPI.h>
 #include "protocol.h"
+#include "rain.h"
 #include "settings.h"
 #include "waiting_frames.h"
 
@@ -47,6 +48,7 @@ void displayInit() {
   displayApplySettings();
   tft.fillScreen(TFT_BLACK);
   displayResetPalette();
+  rainReset(micros() ^ ESP.getChipId());
 }
 
 // Desenha o quadro com a paleta dada. As telas de espera e o padrão de teste usam a de partida,
@@ -73,9 +75,12 @@ static void drawFrame(const uint16_t* colors, uint8_t count) {
 
 void displayDraw() { drawFrame(palette, paletteCount); }
 
-// Descomprime um quadro de espera (RLE em PROGMEM) para frameBuf.
+// Tela de espera: letras caindo (rain.cpp) e, por cima, a caixa de texto guardada em PROGMEM (RLE).
+// O índice 15 da caixa é transparente e deixa a chuva aparecer.
 void displayWaiting(uint8_t state, uint32_t frame) {
   if (state >= WAIT_STATES) return;
+  rainStep(frameBuf);
+
   uint8_t which = WAIT_FIRST_FRAME[state] + (frame % WAIT_FRAME_COUNT[state]);
   uint32_t at = pgm_read_dword(&WAIT_OFFSET[which]);
   uint32_t end = pgm_read_dword(&WAIT_OFFSET[which + 1]);
@@ -84,8 +89,10 @@ void displayWaiting(uint8_t state, uint32_t frame) {
     uint8_t run = pgm_read_byte(&WAIT_DATA[at++]);
     uint8_t index = pgm_read_byte(&WAIT_DATA[at++]) & 0x0F;
     while (run-- && pixel < FRAME_PIXELS) {
-      if (pixel & 1) frameBuf[pixel >> 1] = (frameBuf[pixel >> 1] & 0x0F) | (index << 4);
-      else frameBuf[pixel >> 1] = (frameBuf[pixel >> 1] & 0xF0) | index;
+      if (index != 15) {
+        if (pixel & 1) frameBuf[pixel >> 1] = (frameBuf[pixel >> 1] & 0x0F) | (index << 4);
+        else frameBuf[pixel >> 1] = (frameBuf[pixel >> 1] & 0xF0) | index;
+      }
       pixel++;
     }
   }

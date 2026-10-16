@@ -9,7 +9,7 @@ export function png(pixels: Uint8Array): Buffer {
   for (let y = 0; y < size; y += 1) {
     const row = y * (size * 3 + 1);
     for (let x = 0; x < size; x += 1) {
-      const color = rgb[pixels[Math.floor(y / SCALE) * FRAME_SIZE + Math.floor(x / SCALE)]];
+      const color = rgb[pixels[Math.floor(y / SCALE) * FRAME_SIZE + Math.floor(x / SCALE)]] ?? [255, 0, 255];
       raw.set(color, row + 1 + x * 3);
     }
   }

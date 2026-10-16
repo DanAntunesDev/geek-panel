@@ -39,7 +39,7 @@ void loop() {
   static uint32_t lastAnimation = 0;
   static uint32_t animationFrame = 0;
   if (portalTestActive() || streamHasFrame()) return;
-  if (now - lastAnimation >= 125) {
+  if (now - lastAnimation >= 100) {
     lastAnimation = now;
     uint8_t state = WAIT_PAINEL;
     if (WiFi.status() != WL_CONNECTED) state = portalSetupMode() ? WAIT_CONFIG : WAIT_WIFI;
