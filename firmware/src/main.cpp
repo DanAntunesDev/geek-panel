@@ -5,7 +5,6 @@
 #ifndef LOADER_ONLY
 #include "display.h"
 #include "stream.h"
-#include "waiting_frames.h"
 #endif
 
 static uint32_t wifiStartedAt = 0;
@@ -14,7 +13,7 @@ void setup() {
   settingsLoad();
 #ifndef LOADER_ONLY
   displayInit();
-  displayWaiting(WAIT_WIFI, 0);
+  displayWaiting(WAIT_WIFI);
 #endif
   WiFi.persistent(true);
   WiFi.mode(WIFI_STA);
@@ -37,14 +36,13 @@ void loop() {
   streamLoop();
   // enquanto o PC não manda quadros, mostra a tela de espera animada
   static uint32_t lastAnimation = 0;
-  static uint32_t animationFrame = 0;
   if (portalTestActive() || streamHasFrame()) return;
   if (now - lastAnimation >= 100) {
     lastAnimation = now;
     uint8_t state = WAIT_PAINEL;
     if (WiFi.status() != WL_CONNECTED) state = portalSetupMode() ? WAIT_CONFIG : WAIT_WIFI;
     else if (streamRejected()) state = WAIT_CODIGO;
-    displayWaiting(state, animationFrame++);
+    displayWaiting(state);
   }
 #endif
 }

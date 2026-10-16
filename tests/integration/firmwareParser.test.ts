@@ -64,11 +64,13 @@ describe.skipIf(!hasCompiler)("chuva da tela de espera (C++)", () => {
 #include "rain.h"
 int main() {
   static uint8_t frame[7200];
+  static uint8_t before[7200];
   rainReset(7);
+  rainMessage(1);
   unsigned counts[16] = {0};
   unsigned changed = 0;
-  static uint8_t before[7200];
-  for (int n = 0; n < 80; n++) {
+  unsigned decodedAt = 0;
+  for (int n = 1; n <= 400; n++) {
     for (int i = 0; i < 7200; i++) before[i] = frame[i];
     rainStep(frame);
     for (int i = 0; i < 7200; i++) {
@@ -76,20 +78,26 @@ int main() {
       counts[frame[i] >> 4]++;
       if (frame[i] != before[i]) changed++;
     }
+    if (!decodedAt && rainLocked() == rainTotal()) decodedAt = n;
   }
-  printf("%u %u %u %u %u %u\\n", counts[0], counts[1], counts[2], counts[3], counts[4] + counts[5] + counts[15], changed > 0);
+  printf("%u %u %u %u %u %u %u %u\\n", counts[0], counts[1], counts[2], counts[3], counts[4] + counts[5] + counts[15], changed > 0, decodedAt, rainTotal());
 }`;
 
-  it("só usa preto, branco e os dois cinzas, e anima", () => {
+  it("só usa preto, branco e os dois cinzas, anima e decifra a mensagem inteira", () => {
     writeFileSync(path.join(work, "rain_test.cpp"), source);
     const binary = path.join(work, "rain_test");
     execFileSync("g++", ["-std=c++17", "-Wall", "-Wextra", "-Werror", "-Ifirmware/src", "-o", binary, path.join(work, "rain_test.cpp"), "firmware/src/rain.cpp"]);
-    const [white, light, gray, black, other, animated] = execFileSync(binary).toString().trim().split(" ").map(Number);
+    const [white, light, gray, black, other, animated, decodedAt, total] = execFileSync(binary).toString().trim().split(" ").map(Number);
     expect(other).toBe(0);
     expect(animated).toBe(1);
     expect(white).toBeGreaterThan(0);
     expect(light).toBeGreaterThan(0);
     expect(gray).toBeGreaterThan(0);
+    // "PROCURANDO", "GEEK PANEL..." e "ABRA NO PC" sem os espaços
+    expect(total).toBe(10 + 12 + 8);
+    // a chuva decifra tudo antes do tempo limite, sem precisar do empurrão final
+    expect(decodedAt).toBeGreaterThan(0);
+    expect(decodedAt).toBeLessThanOrEqual(220);
     // o fundo preto domina: é chuva, não uma parede de letras
     expect(black).toBeGreaterThan((white + light + gray) * 3);
   });
