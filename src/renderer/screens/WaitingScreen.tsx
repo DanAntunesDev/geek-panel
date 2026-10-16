@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { applyContrast } from "../../shared/theme.js";
+import type { DeviceLinkStatus } from "../../shared/types.js";
 import { Segmented } from "../components/config/ui.js";
 import { DeviceFrame } from "../pixel/DeviceFrame.js";
 import { PixelScene } from "../pixel/PixelScene.js";
@@ -8,6 +9,7 @@ import { FRAME, WAITING_PALETTE, WAITING_STATES, WaitingRain } from "../waiting/
 const FPS = 10;
 
 type State = (typeof WAITING_STATES)[number]["id"];
+type Choice = State | "auto";
 
 // A tela que o aparelho mostra quando não acha o painel, desenhada aqui do mesmo jeito e com o contraste atual.
 function WaitingScene({ state, contrast }: { state: State; contrast: number }) {
@@ -41,8 +43,17 @@ function WaitingScene({ state, contrast }: { state: State; contrast: number }) {
 }
 
 export function WaitingScreen() {
-  const [state, setState] = useState<State>("painel");
+  const [choice, setChoice] = useState<Choice>("auto");
+  const [link, setLink] = useState<DeviceLinkStatus | null>(null);
   const [contrast, setContrast] = useState(50);
+
+  useEffect(() => {
+    window.painelApi.getDeviceLink().then(setLink).catch(() => undefined);
+    return window.painelApi.onDeviceLinkUpdate(setLink);
+  }, []);
+
+  // no automático, a frase segue o que o app sabe do aparelho: código recusado ou procurando
+  const state: State = choice !== "auto" ? choice : link?.rejected && !link.connected ? "codigo" : "painel";
 
   useEffect(() => {
     const load = () => window.painelApi.getConfig().then((config) => setContrast(config.device.contrast));
@@ -57,8 +68,15 @@ export function WaitingScreen() {
         <WaitingScene state={state} contrast={contrast} />
       </DeviceFrame>
       <div style={{ padding: "0 16px 16px", flexShrink: 0 }}>
-        <p className="cfg-note">É isto que o aparelho mostra quando não acha o painel. Escolha a situação para ver a frase de baixo.</p>
-        <Segmented label="Situação" value={state} options={WAITING_STATES.map((item) => ({ value: item.id, label: item.label }))} onChange={setState} />
+        <p className="cfg-note">
+          É isto que o aparelho mostra quando não acha o painel. No automático a frase acompanha o aparelho; os outros botões mostram cada situação.
+        </p>
+        <Segmented
+          label="Situação"
+          value={choice}
+          options={[{ value: "auto" as Choice, label: "AUTOMÁTICO" }, ...WAITING_STATES.map((item) => ({ value: item.id as Choice, label: item.label }))]}
+          onChange={setChoice}
+        />
       </div>
     </>
   );
