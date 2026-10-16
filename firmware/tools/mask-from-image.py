@@ -8,7 +8,7 @@ cores da tela de espera. Grava firmware/src/rain_mask.h e src/shared/waitingMask
 import base64
 import sys
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 SIZE = 120
 WHITE, LIGHT, GRAY, BLACK, RED, CLEAR = 0, 1, 2, 3, 4, 15
@@ -80,9 +80,78 @@ for side in (False, True):
     flip = (lambda x: 1000 - x) if side else (lambda x: x)
     line([(flip(484), 520), (flip(474), 556), (flip(470), 578)], 1, GRAY)
 
-# perto da borda só sobra cinza: lá a imagem tem o contorno e as dobras pontilhadas, que virariam sujeira preta
-from PIL import ImageFilter
+# detalhes de volume e desgaste, só com as cores da tela (cinza claro em xadrez, vermelho escuro)
+DARK_RED = 5
 
+
+def paint(x, y, color, only=(WHITE,)):
+    if 0 <= x < SIZE and 0 <= y < SIZE and grid[y][x] in only:
+        grid[y][x] = color
+
+
+body = inside.filter(ImageFilter.MinFilter(3))
+deep = inside.filter(ImageFilter.MinFilter(11))
+for y in range(SIZE):
+    for x in range(SIZE):
+        if grid[y][x] == WHITE and body.getpixel((x, y)) >= 128:
+            # lados do rosto em sombra: xadrez de cinza claro que fica mais fechado perto da borda
+            band = deep.getpixel((x, y)) < 128
+            if band and (x + y) % 2 == 0:
+                grid[y][x] = LIGHT
+
+for y in range(1, SIZE - 2):
+    for x in range(SIZE):
+        if grid[y][x] != RED:
+            continue
+        below = grid[y + 1][x]
+        # embaixo das sobrancelhas, um fio vermelho escuro dá espessura
+        if y < 70 and below == WHITE:
+            grid[y + 1][x] = DARK_RED
+        # no sorriso, só a última linha de cada trecho vermelho escurece (as linhas pretas não contam)
+        elif y >= 70 and below not in (RED, BLACK):
+            grid[y][x] = DARK_RED
+
+# bochechas e ponte do nariz com um xadrez leve; ponta do nariz mais clara
+for cx in (40, 80):
+    for dy in range(-3, 4):
+        for dx in range(-5, 6):
+            if (dx * dx) / 25 + (dy * dy) / 9 <= 1 and (cx + dx + 56 + dy) % 2 == 0:
+                paint(cx + dx, 58 + dy, LIGHT)
+for y in range(46, 72):
+    for x in (58, 62):
+        if (x + y) % 2 == 0:
+            paint(x, y, LIGHT)
+
+# olhos com um brilho, e uma sombrinha embaixo
+for cx in (47, 73):
+    paint(cx - 3, 54, LIGHT, (BLACK,))
+    for dx in range(-5, 6, 2):
+        paint(cx + dx, 60, GRAY)
+
+# marcas de desgaste: riscos finos e pontinhos brancos na tinta vermelha
+seed_value = 5
+def rnd(limit):
+    global seed_value
+    seed_value = (seed_value * 1103515245 + 12345) & 0x7FFFFFFF
+    return seed_value % limit
+
+
+for rx, ry, dx, dy in [(392, 340, 1, 1), (610, 350, -1, 1), (450, 330, 0, 1), (540, 330, 1, 1), (420, 640, 1, -1), (585, 625, -1, -1), (380, 520, 1, 0), (618, 515, -1, 0)]:
+    x, y = to_grid(rx, ry)
+    for _ in range(5 + rnd(6)):
+        paint(round(x), round(y), LIGHT)
+        x += dx + (rnd(3) - 1) * 0.6
+        y += dy + (rnd(3) - 1) * 0.6
+for y in range(SIZE):
+    for x in range(SIZE):
+        if grid[y][x] == RED and rnd(16) == 0:
+            grid[y][x] = WHITE
+
+# dobras do tecido ao longo do queixo
+line([(385, 595), (402, 640), (430, 678), (470, 704)], 1, GRAY)
+line([(1000 - 385, 595), (1000 - 402, 640), (1000 - 430, 678), (1000 - 470, 704)], 1, GRAY)
+
+# perto da borda só sobra cinza: lá a imagem tem o contorno e as dobras pontilhadas, que virariam sujeira preta
 core = inside.filter(ImageFilter.MinFilter(7))
 for y in range(SIZE):
     for x in range(SIZE):
