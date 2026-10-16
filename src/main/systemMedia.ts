@@ -82,7 +82,16 @@ async function loadDbus(): Promise<typeof import("dbus-next")> {
   return "sessionBus" in loaded && typeof loaded.sessionBus === "function" ? loaded : (loaded.default as typeof import("dbus-next"));
 }
 
-export class SystemMediaReader {
+// O que o resto do app precisa de quem lê os players do computador (Linux ou Windows).
+export interface SystemReader {
+  identity: string | null;
+  warning: string | null;
+  read(): Promise<MediaState | null>;
+  control(command: PlayerCommand): Promise<void>;
+  close(): void;
+}
+
+export class SystemMediaReader implements SystemReader {
   private bus: import("dbus-next").MessageBus | null = null;
   private active: string | null = null;
   private lastPosition = 0;
@@ -169,7 +178,7 @@ export class SystemMediaReader {
   }
 }
 
-export function systemSource(reader: SystemMediaReader, isEnabled: () => Promise<boolean>): PlaybackSource {
+export function systemSource(reader: SystemReader, isEnabled: () => Promise<boolean>): PlaybackSource {
   return {
     id: "system",
     get label() {

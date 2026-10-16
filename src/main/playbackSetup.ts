@@ -5,6 +5,7 @@ import type { OAuthManager } from "./oauth.js";
 import { PlaybackManager } from "./playback.js";
 import { SpotifyPlayback } from "./spotifySource.js";
 import { SystemMediaReader, systemSource } from "./systemMedia.js";
+import { WindowsMediaReader } from "./windowsMedia.js";
 import { startYouTubeHost, type YouTubeHost } from "./youtubeHost.js";
 import { YouTubePlayback } from "./youtubeSource.js";
 import { createYouTubePage } from "./youtubeWindow.js";
@@ -24,7 +25,7 @@ export function createPlayback({ configStore, oauth, onChange }: Deps) {
   };
 
   let host: Promise<YouTubeHost> | null = null;
-  const reader = new SystemMediaReader();
+  const reader = process.platform === "win32" ? new WindowsMediaReader() : new SystemMediaReader();
 
   const spotify = new SpotifyPlayback({
     oauth,
