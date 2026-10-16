@@ -52,7 +52,8 @@
         "entry": {
           "StartupWMClass": "com.geekpanel.app"
         }
-      }
+      },
+      "artifactName": "geek-panel-${version}-linux.${ext}"
     },
     "win": {
       "target": [
@@ -64,9 +65,12 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "perMachine": false
+      "perMachine": false,
+      "artifactName": "geek-panel-setup-${version}.${ext}"
     },
-    "artifactName": "geek-panel-${version}-${os}.${ext}"
+    "portable": {
+      "artifactName": "geek-panel-portable-${version}.${ext}"
+    }
   },
   "allowScripts": {
     "electron@33.4.11": true,
